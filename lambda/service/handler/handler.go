@@ -13,8 +13,7 @@ func init() {
 	logger.Info("init()")
 }
 
-// TODO update Handler function name
-func TemplateServiceHandler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (*events.APIGatewayV2HTTPResponse, error) {
+func EmailServiceHandler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (*events.APIGatewayV2HTTPResponse, error) {
 	logger = logger.With(slog.String("requestID", request.RequestContext.RequestID))
 
 	apiResponse, err := handleRequest()

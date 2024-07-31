@@ -7,5 +7,5 @@ import (
 )
 
 func main() {
-	lambda.Start(handler.TemplateServiceHandler)
+	lambda.Start(handler.EmailServiceHandler)
 }
