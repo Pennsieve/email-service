@@ -112,3 +112,51 @@ data "aws_iam_policy_document" "email_templates_s3_bucket_policy_document" {
     }
   }
 }
+
+data "aws_iam_policy_document" "email_service_queue_kms_key_policy_document" {
+  statement {
+    sid       = "Enable IAM User Permissions"
+    effect    = "Allow"
+    actions   = ["kms:*"]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.terraform_remote_state.account.outputs.aws_account_id}:root"]
+    }
+  }
+
+  statement {
+    sid    = "Enable Cloudwatch Event Permissions"
+    effect = "Allow"
+
+    actions = [
+      "kms:GenerateDataKey",
+      "kms:Decrypt",
+    ]
+
+    resources = ["*"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "email_service_queue_policy_document" {
+  statement {
+    effect    = "Allow"
+    actions   = [
+      "sqs:ReceiveMessage",
+      "sqs:SendMessage",
+      "sqs:DeleteMessage",
+    ]
+    resources = [aws_sqs_queue.email_service_queue.arn]
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+  }
+}
