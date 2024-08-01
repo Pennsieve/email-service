@@ -9,7 +9,7 @@ import (
 )
 
 func TestHandler(t *testing.T) {
-	resp, err := TemplateServiceHandler(context.Background(), events.APIGatewayV2HTTPRequest{
+	resp, err := EmailServiceHandler(context.Background(), events.APIGatewayV2HTTPRequest{
 		RequestContext: events.APIGatewayV2HTTPRequestContext{RequestID: "handler-test"}})
 	if assert.NoError(t, err) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

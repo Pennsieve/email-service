@@ -1,28 +1,94 @@
-# template-serverless-service
+# email-service
+A Serverless Service that sends emails for the Pennsieve platform
 
-A template for building a new Pennsieve Serverless Service
+The **Email Service** receives requests from an SQS queue and via an API endpoint. The requests specify which email is to be sent, and to whom it should be sent. The service uses DynamoDB tables to store service-specific metadata and a record of email messages sent.
 
-## How to use this template to create a new `foo-service` repository
+# Entry points
 
-* This [repo's page on GitHub](https://github.com/Pennsieve/template-serverless-service)
-  has a "Use this template" button. Click the button and select "Create a new repository".
-  Name the new repository `foo-service`
-* In the new `foo-service` repo search for the `TODO` comments to find names/strings that need to be updated.
-  Usually the update is simply to change `template-serverless-servce` to `foo-service` or `TemplateServerlessService`
-  to `FooService`, etc.
-* The `TODO` comments mostly only identify where a name is first declared. So fix any compilation errors with the new
-  names.
-* Replace this README with one for Foo service!
+## SQS Queue
+`{env}-email-service-send-message-queue-use1`
 
-## Preferred Go version and libraries
+## API endpoint
+**POST** `/email/send`
 
-* Go 1.21
-* Structured logging: [log/slog](https://pkg.go.dev/log/slog) from the standard library.
-* Postgres Driver: [jackc/pgx](https://github.com/jackc/pgx) unless you need to interact with a Pennsieve Go library
-  that still uses [lib/pq](https://github.com/lib/pq) in which case, use that.
-* Testing utility: [stretchr/testify](https://pkg.go.dev/github.com/stretchr/testify)
+- internal use only
+- requires Service Token
 
-## Additional steps
-* Create and populate prod and non-prod `foo-service` directories in [Pennsieve/infrastructure](https://github.com/Pennsieve/infrastructure)
-* Create prod and non-prod `foo-service` service-deploy jobs in Jenkins.
-* Add new endpoint in [Pennsieve/pennsieve-go-api](https://github.com/Pennsieve/pennsieve-go-api).
+## Request Format
+
+The *send email* request is a JSON object with three top-level elements:
+
+- `messageId` is a slug-style identifier of the email to be sent
+- `recipients` is a list of objects with `name` and `email` attributes, which identify where the message will be sent
+- `context` is the collection of values to be replaced in the email template
+
+Example:
+```json
+{
+  "messageId": string,
+  "recipients": [
+    {
+      "name": string,
+      "email": string
+    }
+  ],
+  "context": {
+    "organizationId": number,
+    "organizationNodeId": string,
+    "organiztionName": string,
+    "userId": number,
+    "userNodeId": number,
+    "userName": string,
+    "datasetId": number,
+    "datasetNodeId": number,
+    "datasetName": string,
+    "customMessage": string,
+    "field1": value,
+    "field2": value
+  }
+}
+```
+
+# Internals
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| PENNSIEVE_DOMAIN | the DNS domain in which the service is running |
+| S3_BUCKET | the name of the AWS S3 bucket where the email templates are stored |
+| TEMPLATE_FOLDER | the name of the "folder" in the AWS S3 bucket where the email templates are stored |
+
+## Table: `email-message-templates`
+This table maps the `messageId` to a file object on AWS S3. It also contains the default *subject* line for the email message. The default *subject* may be overridden if there is a `subject` in the message `context`.
+
+### Item Attributes
+- `messageId`: String, slug-style 
+- `subject`: String, the default subject line for the email message
+- `templateFile`: String, the name of the template file
+
+### Keys
+- **Partition Key**: `messageId`
+- **Sort Key**: *TBD*
+
+### Search Indexes
+none
+
+## Table: `email-message-log`
+This table is a record of email messages sent by the **Email Service**
+
+### Item Attributes
+- `id` : UUID
+- `timestamp`: Int64
+- `messageSent`: String(`timestamp`)
+- `recipient`: String(email address)
+- `messageId`: String
+- `context`: Map of String (name -> value)
+
+### Keys
+- **Partition Key**: `id`
+- **Sort Key**: `messageId`
+
+### Search Indexes
+- **RecipientIndex**: `recipient` + `messageId`
+

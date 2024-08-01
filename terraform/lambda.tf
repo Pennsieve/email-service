@@ -1,6 +1,5 @@
 resource "aws_lambda_function" "service_lambda" {
-  # TODO update description
-  description   = "Template for building a Lambda Function which handles requests for a new serverless Service"
+  description   = "A Serverless Service that sends emails for the Pennsieve platform"
   function_name = "${var.environment_name}-${var.service_name}-service-lambda-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
   handler       = "bootstrap"
   runtime       = "provided.al2"
