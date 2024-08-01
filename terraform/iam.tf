@@ -84,9 +84,40 @@ data "aws_iam_policy_document" "service_iam_policy_document" {
     resources = ["arn:aws:ssm:${data.aws_region.current_region.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.environment_name}/${var.service_name}/*"]
   }
 
+  statement {
+    sid = "EmailServiceSESPermissions"
+    effect  = "Allow"
+    actions = [
+      "ses:SendEmail",
+      "ses:SendRawEmail",
+    ]
+    resources = ["*"]
+  }
+
+  source_policy_documents = [
+    data.aws_iam_policy_document.email_service_queue_policy_document.json,
+    data.aws_iam_policy_document.email_service_queue_kms_key_policy_document.json,
+    data.aws_iam_policy_document.email_templates_s3_bucket_policy_document.json
+  ]
 }
 
 data "aws_iam_policy_document" "email_templates_s3_bucket_policy_document" {
+  statement {
+    sid = "EmailTemplatesS3Permission"
+    effect = "Allow"
+
+    resources = [
+      "arn:aws:s3:::pennsieve-${local.email_templates_bucket_name}",
+      "arn:aws:s3:::pennsieve-${local.email_templates_bucket_name}/*",
+    ]
+
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectAttributes",
+      "s3:ListBucket"
+    ]
+  }
+
   statement {
     sid    = "ForceSSLOnlyAccess"
     effect = "Deny"
