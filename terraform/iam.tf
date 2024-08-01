@@ -85,3 +85,30 @@ data "aws_iam_policy_document" "service_iam_policy_document" {
   }
 
 }
+
+data "aws_iam_policy_document" "email_templates_s3_bucket_policy_document" {
+  statement {
+    sid    = "ForceSSLOnlyAccess"
+    effect = "Deny"
+
+    resources = [
+      "arn:aws:s3:::pennsieve-${local.email_templates_bucket_name}",
+      "arn:aws:s3:::pennsieve-${local.email_templates_bucket_name}/*",
+    ]
+
+    actions = [
+      "s3:*",
+    ]
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    condition {
+      test     = "Bool"
+      values   = ["false"]
+      variable = "aws:SecureTransport"
+    }
+  }
+}
