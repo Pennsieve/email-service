@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/pennsieve/template-serverless-service/service/logging"
+	"github.com/pennsieve/email-service/service/logging"
 	"log/slog"
 )
 
