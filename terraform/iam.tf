@@ -97,7 +97,8 @@ data "aws_iam_policy_document" "service_iam_policy_document" {
   source_policy_documents = [
     data.aws_iam_policy_document.email_service_queue_policy_document.json,
     data.aws_iam_policy_document.email_service_queue_kms_key_policy_document.json,
-    data.aws_iam_policy_document.email_templates_s3_bucket_policy_document.json
+    data.aws_iam_policy_document.email_templates_s3_bucket_policy_document.json,
+    data.aws_iam_policy_document.email_service_dynamodb_policy_document.json
   ]
 }
 
@@ -189,5 +190,30 @@ data "aws_iam_policy_document" "email_service_queue_policy_document" {
       type        = "Service"
       identifiers = ["events.amazonaws.com"]
     }
+  }
+}
+
+data "aws_iam_policy_document" "email_service_dynamodb_policy_document" {
+  statement {
+    sid = "EmailServiceLambdaDynamoDBPermissions"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:BatchGetItem",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:PartiQLSelect"
+    ]
+
+    resources = [
+      aws_dynamodb_table.email_message_templates_table.arn,
+      "${aws_dynamodb_table.email_message_templates_table.arn}/*",
+      aws_dynamodb_table.email_message_log_table.arn,
+      "${aws_dynamodb_table.email_message_log_table.arn}/*"
+    ]
   }
 }

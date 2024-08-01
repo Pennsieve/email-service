@@ -63,9 +63,9 @@ Example:
 This table maps the `messageId` to a file object on AWS S3. It also contains the default *subject* line for the email message. The default *subject* may be overridden if there is a `subject` in the message `context`.
 
 ### Item Attributes
-- `messageId`: String, slug-style 
-- `subject`: String, the default subject line for the email message
-- `templateFile`: String, the name of the template file
+- `MessageId`: String, slug-style 
+- `Subject`: String, the default subject line for the email message
+- `TemplateFile`: String, the name of the template file
 
 ### Keys
 - **Partition Key**: `messageId`
@@ -78,17 +78,16 @@ none
 This table is a record of email messages sent by the **Email Service**
 
 ### Item Attributes
-- `id` : UUID
-- `timestamp`: Int64
-- `messageSent`: String(`timestamp`)
-- `recipient`: String(email address)
-- `messageId`: String
-- `context`: Map of String (name -> value)
+- `Id` : UUID
+- `Timestamp`: Int64
+- `MessageSent`: String(`timestamp`)
+- `Recipient`: String(email address)
+- `MessageId`: String
+- `Context`: Map of String (name -> value)
 
 ### Keys
-- **Partition Key**: `id`
-- **Sort Key**: `messageId`
+- **Partition Key**: `Id`
+- **Sort Key**: `MessageId`
 
 ### Search Indexes
-- **RecipientIndex**: `recipient` + `messageId`
-
+- **RecipientMessageIdIndex**: `Recipient` + `MessageId`
