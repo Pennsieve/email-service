@@ -32,8 +32,7 @@ resource "aws_iam_policy" "service_lambda_iam_policy" {
 data "aws_iam_policy_document" "service_iam_policy_document" {
 
   statement {
-    # TODO update sid
-    sid     = "TemplateServiceLambdaLogsPermissions"
+    sid     = "EmailServiceLambdaLogsPermissions"
     effect  = "Allow"
     actions = [
       "logs:CreateLogGroup",
@@ -46,8 +45,7 @@ data "aws_iam_policy_document" "service_iam_policy_document" {
   }
 
   statement {
-    # TODO update sid
-    sid     = "TemplateServiceLambdaEC2Permissions"
+    sid     = "EmailServiceLambdaEC2Permissions"
     effect  = "Allow"
     actions = [
       "ec2:CreateNetworkInterface",
@@ -60,8 +58,7 @@ data "aws_iam_policy_document" "service_iam_policy_document" {
   }
 
   statement {
-    # TODO update sid
-    sid    = "TemplateServiceSecretsManagerPermissions"
+    sid    = "EmailServiceSecretsManagerPermissions"
     effect = "Allow"
 
     actions = [
@@ -75,8 +72,7 @@ data "aws_iam_policy_document" "service_iam_policy_document" {
   }
 
   statement {
-    # TODO update sid
-    sid    = "TemplateServiceSSMPermissions"
+    sid    = "EmailServiceSSMPermissions"
     effect = "Allow"
 
     actions = [
