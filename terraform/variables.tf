@@ -22,7 +22,7 @@ locals {
 
   email_templates                    = "email-templates"
   email_templates_bucket_name        = "pennsieve-${var.environment_name}-${local.email_templates}-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
-  email_templates_logs_target_prefix = "${var.environment_name}/${local.email_templates}/s3/"
+  email_templates_logs_target_prefix = "${var.environment_name}/email-templates/s3/"
 
   encryption_algorithm = "AES256"
   common_tags = {
