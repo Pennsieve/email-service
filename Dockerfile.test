@@ -1,12 +1,12 @@
 FROM golang:1.21-alpine
 
-  # Install git
+# Install git
 RUN set -ex; \
 apk update; \
 apk add --no-cache git
 
-  # Set working directory
-WORKDIR /go/src/github.com/pennsieve/email-service/lambda/service
+# Set working directory
+WORKDIR /go/src/github.com/pennsieve/email-service
 
-  # Run tests
-CMD CGO_ENABLED=0 go test -v ./...
+# Run tests
+CMD CGO_ENABLED=0 sh run-tests.sh

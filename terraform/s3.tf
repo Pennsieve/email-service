@@ -36,7 +36,7 @@ resource "aws_s3_bucket_logging" "email_templates_s3_bucket_logging" {
   bucket = aws_s3_bucket.email_templates_s3_bucket.id
 
   target_bucket = data.terraform_remote_state.region.outputs.logs_s3_bucket_id
-  target_prefix = "${var.environment_name}/${local.email_templates}/s3/"
+  target_prefix = local.email_templates_logs_target_prefix
 }
 
 resource "aws_s3_bucket_cors_configuration" "email_templates_s3_bucket_cors" {
