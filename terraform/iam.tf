@@ -107,6 +107,11 @@ data "aws_iam_policy_document" "email_templates_s3_bucket_policy_document" {
     sid = "EmailTemplatesS3Permission"
     effect = "Allow"
 
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.terraform_remote_state.account.outputs.aws_account_id}:root"]
+    }
+
     resources = [
       "arn:aws:s3:::pennsieve-${local.email_templates_bucket_name}",
       "arn:aws:s3:::pennsieve-${local.email_templates_bucket_name}/*",
