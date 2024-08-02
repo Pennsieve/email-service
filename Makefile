@@ -3,7 +3,8 @@
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
 SERVICE_NAME  ?= "email-service"
-PACKAGE_NAME  ?= "${SERVICE_NAME}-${IMAGE_TAG}.zip"
+PACKAGE_API_NAME  ?= "${SERVICE_NAME}-api-${IMAGE_TAG}.zip"
+PACKAGE_QUEUE_NAME  ?= "${SERVICE_NAME}-queue-${IMAGE_TAG}.zip"
 
 .DEFAULT: help
 
@@ -40,26 +41,43 @@ docker-clean:
 # Build lambda and create ZIP file
 package:
 	@echo ""
-	@echo "***********************"
-	@echo "*   Building lambda   *"
-	@echo "***********************"
+	@echo "***************************"
+	@echo "*   Building API lambda   *"
+	@echo "**************************"
 	@echo ""
 	cd lambda/service; \
   		env GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o $(WORKING_DIR)/lambda/bin/service/bootstrap; \
 		cd $(WORKING_DIR)/lambda/bin/service/ ; \
-			zip -r $(WORKING_DIR)/lambda/bin/service/$(PACKAGE_NAME) .
+			zip -r $(WORKING_DIR)/lambda/bin/service/$(PACKAGE_API_NAME) .
+	@echo ""
+	@echo "*****************************"
+	@echo "*   Building Queue lambda   *"
+	@echo "*****************************"
+	@echo ""
+	cd lambda/queue; \
+		env GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o $(WORKING_DIR)/lambda/bin/queue/bootstrap; \
+		cd $(WORKING_DIR)/lambda/bin/queue/ ; \
+			zip -r $(WORKING_DIR)/lambda/bin/queue/$(PACKAGE_QUEUE_NAME) .
 
 # Copy Service lambda to S3 location
 publish:
 	@make package
 	@echo ""
-	@echo "*************************"
-	@echo "*   Publishing lambda   *"
-	@echo "*************************"
+	@echo "*****************************"
+	@echo "*   Publishing API lambda   *"
+	@echo "*****************************"
 	@echo ""
-	aws s3 cp $(WORKING_DIR)/lambda/bin/service/$(PACKAGE_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
-	rm -rf $(WORKING_DIR)/lambda/bin/service/$(PACKAGE_NAME) $(WORKING_DIR)/lambda/bin/service/bootstrap
+	aws s3 cp $(WORKING_DIR)/lambda/bin/service/$(PACKAGE_API_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
+	rm -rf $(WORKING_DIR)/lambda/bin/service/$(PACKAGE_API_NAME) $(WORKING_DIR)/lambda/bin/service/bootstrap
+	@echo ""
+	@echo "*******************************"
+	@echo "*   Publishing Queue lambda   *"
+	@echo "*******************************"
+	@echo ""
+	aws s3 cp $(WORKING_DIR)/lambda/bin/queue/$(PACKAGE_QUEUE_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
+	rm -rf $(WORKING_DIR)/lambda/bin/queue/$(PACKAGE_NAME) $(WORKING_DIR)/lambda/bin/queue/bootstrap
 
 # Run go mod tidy on modules
 tidy:
 	cd ${WORKING_DIR}/lambda/service; go mod tidy
+	cd ${WORKING_DIR}/lambda/queue; go mod tidy

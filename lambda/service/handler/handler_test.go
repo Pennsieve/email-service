@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestHandler(t *testing.T) {
+func TestServiceHandler(t *testing.T) {
 	resp, err := EmailServiceHandler(context.Background(), events.APIGatewayV2HTTPRequest{
 		RequestContext: events.APIGatewayV2HTTPRequestContext{RequestID: "handler-test"}})
 	if assert.NoError(t, err) {
