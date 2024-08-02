@@ -20,5 +20,5 @@ resource "aws_sqs_queue" "email_service_deadletter_queue" {
 
 resource "aws_sqs_queue_policy" "email_service_sqs_queue_policy" {
   queue_url = aws_sqs_queue.email_service_queue.id
-  policy    = data.aws_iam_policy_document.email_service_queue_policy_document.json
+  policy    = data.aws_iam_policy_document.email_service_sqs_policy_document.json
 }
