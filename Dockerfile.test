@@ -9,4 +9,4 @@ apk add --no-cache git
 WORKDIR /go/src/github.com/pennsieve/email-service
 
 # Run tests
-CMD CGO_ENABLED=0 sh run_tests.sh
+CMD CGO_ENABLED=0 sh run-tests.sh
