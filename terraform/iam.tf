@@ -147,7 +147,7 @@ data "aws_iam_policy_document" "email_templates_s3_bucket_policy_document" {
 
 data "aws_iam_policy_document" "email_service_queue_kms_key_policy_document" {
   statement {
-    sid       = "Enable IAM User Permissions"
+    sid       = "EnableIAMUserPermissions"
     effect    = "Allow"
     actions   = ["kms:*"]
     resources = ["*"]
@@ -159,7 +159,7 @@ data "aws_iam_policy_document" "email_service_queue_kms_key_policy_document" {
   }
 
   statement {
-    sid    = "Enable Cloudwatch Event Permissions"
+    sid    = "EnableCloudwatchEventPermissions"
     effect = "Allow"
 
     actions = [
@@ -178,6 +178,7 @@ data "aws_iam_policy_document" "email_service_queue_kms_key_policy_document" {
 
 data "aws_iam_policy_document" "email_service_queue_policy_document" {
   statement {
+    sid    = "EmailServiceSQSPermissions"
     effect    = "Allow"
     actions   = [
       "sqs:ReceiveMessage",
