@@ -16,6 +16,13 @@ variable "lambda_bucket" {
   default = "pennsieve-cc-lambda-functions-use1"
 }
 
+# Number of days a row in the email-message-log journal is retained before the
+# DynamoDB TTL expires it. Controls how far back "I never got the email"
+# troubleshooting can reach.
+variable "journal_ttl_days" {
+  default = 90
+}
+
 locals {
   domain_name = data.terraform_remote_state.account.outputs.domain_name
   hosted_zone = data.terraform_remote_state.account.outputs.public_hosted_zone_id

@@ -17,5 +17,5 @@
 # IntelliJ
 .idea
 
-# Lambda Binaries Zip files
-lambda/bin
+# Lambda build artifacts (bootstrap binary + deployment zip)
+/bin
