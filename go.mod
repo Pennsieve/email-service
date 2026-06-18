@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.31.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.48.1
 	github.com/aws/aws-sdk-go-v2/service/ses v1.22.3
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.31.4
 	github.com/stretchr/testify v1.9.0
 )
 
