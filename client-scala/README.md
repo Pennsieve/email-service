@@ -39,13 +39,16 @@ client.send(request) match {
 - `new EmailClient(sqs, queueUrl)` — construct the client.
 - `client.send(request): Try[String]` — validate + enqueue; returns the SQS
   message id.
-- **Typed builders** in `Messages` (e.g. `datasetPublicationAccepted`,
-  `changeOfDatasetOwner`, `addedToTeam`, `rehydrationComplete`,
-  `datasetProposalSubmitted`) — each returns an `EmailRequest`. The builder owns
+- **Typed builders** in `Messages` — one per template (e.g.
+  `datasetPublicationAccepted`, `changeOfDatasetOwner`, `addedToTeam`,
+  `rehydrationComplete`, …) — each returns an `EmailRequest`. The builder owns
   the `messageId` and the context keys the template expects.
-- `Messages.message(messageId, to, context)` — untyped escape hatch.
+- `Messages.build(messageId, to, context)` — untyped escape hatch.
 - Chainable on `EmailRequest`: `withOrganization(id)`, `withDedupeId(id)`,
   `withSubject(s)`.
+
+`Messages.scala` is **generated** from `contract/template-variables.json`
+(see the Go client's `make generate`) — do not hand-edit it.
 
 ## Artifact
 
@@ -73,6 +76,7 @@ email-service `Jenkinsfile`: every `main` build publishes a SNAPSHOT; pass the
 
 When the wire contract changes, update the fixtures in `../contract/fixtures`
 and both clients in the same PR — the contract tests on each side will fail
-until the JSON shapes match again. When adding a builder, use the exact context
-keys from the email-templates repo's `template-variables.json`, matching the Go
-client's builder.
+until the JSON shapes match again. Builders are generated from the template
+manifest, so adding/changing a template's variables is: update
+`contract/template-variables.json`, then `make generate` (regenerates both the
+Go and Scala builders).

@@ -42,22 +42,26 @@ if err := c.Send(ctx, req); err != nil {
 
 - `New(sqsClient, queueURL) *Client` — construct the client.
 - `(*Client).Send(ctx, EmailRequest) error` — validate + enqueue.
-- **Typed builders** per message (e.g. `DatasetPublicationAccepted`,
-  `ChangeOfDatasetOwner`, `AddedToTeam`, `RehydrationComplete`,
-  `DatasetProposalSubmitted`) — each takes a `To` and an `Args` struct and
-  returns a validated `EmailRequest`. The builder owns the `messageId` and the
-  context keys the template expects.
-- `Message(messageId, to, context)` — untyped escape hatch for templates without
-  a typed builder yet.
+- **Typed builders** — one per template (e.g. `DatasetPublicationAccepted`,
+  `ChangeOfDatasetOwner`, `AddedToTeam`, `RehydrationComplete`, …) — each takes
+  a `To` and an `Args` struct and returns a validated `EmailRequest`. The builder
+  owns the `messageId` and the context keys the template expects.
+- `Message(messageId, to, context)` — untyped escape hatch.
 - Chainable options on `EmailRequest`: `WithOrganization(id)`,
   `WithDedupeId(id)`, `WithSubject(s)`.
 
-## Adding a builder
+## Builders are generated
 
-Add an `Args` struct + builder function in `messages.go`, using the exact
-context keys from the email-templates repo's `template-variables.json`. Existing
-callers are unaffected. (A future step could codegen `messages.go` from that
-manifest so the two never drift.)
+`messages.go` is **generated** from the template manifest
+(`contract/template-variables.json`) — do not hand-edit it. After a template's
+variables change (and the manifest is updated), regenerate both the Go and Scala
+builders:
+
+```bash
+make generate   # = go run internal/gen/main.go
+```
+
+This guarantees the builders never drift from the templates' actual variables.
 
 ## Notes
 

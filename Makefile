@@ -1,4 +1,4 @@
-.PHONY: help clean test test-ci package publish tidy
+.PHONY: help clean test test-ci package publish tidy generate
 
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
@@ -15,6 +15,7 @@ help:
 	@echo "make test-ci			- run dockerized tests for Jenkins"
 	@echo "make package			- build and package the queue lambda"
 	@echo "make publish			- package and publish the queue lambda to S3"
+	@echo "make generate			- regenerate client builders from the template manifest"
 
 # Run dockerized tests (can be used locally)
 test:
@@ -58,3 +59,7 @@ publish: package
 # Run go mod tidy
 tidy:
 	go mod tidy
+
+# Regenerate the client builders (Go + Scala) from contract/template-variables.json.
+generate:
+	go run internal/gen/main.go
