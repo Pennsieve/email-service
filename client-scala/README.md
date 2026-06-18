@@ -47,12 +47,27 @@ client.send(request) match {
 - Chainable on `EmailRequest`: `withOrganization(id)`, `withDedupeId(id)`,
   `withSubject(s)`.
 
-## Building
+## Artifact
+
+```
+com.pennsieve %% email-client-scala % <version>   // Scala 2.13
+```
+
+Published to the Pennsieve Nexus (`nexus.pennsieve.cc`), same as pennsieve-api,
+so a consumer that already resolves Pennsieve artifacts needs no extra resolver.
+
+## Building & publishing
 
 ```bash
-sbt test      # compiles + runs the contract tests
-sbt publish   # publish the artifact (configure the repo in build.sbt)
+sbt test                       # compile + run the contract tests
+sbt publish                    # publish a -SNAPSHOT to Nexus
+sbt -Dversion=1.2.3 publish    # publish release 1.2.3 to Nexus
 ```
+
+Publishing requires `PENNSIEVE_NEXUS_USER` / `PENNSIEVE_NEXUS_PW` in the
+environment (the Jenkins executor provides them). CI publishes from the
+email-service `Jenkinsfile`: every `main` build publishes a SNAPSHOT; pass the
+`RELEASE_VERSION` job parameter to cut a release.
 
 ## Keeping in sync with the Go client
 
