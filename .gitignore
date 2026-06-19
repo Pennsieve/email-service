@@ -17,5 +17,10 @@
 # IntelliJ
 .idea
 
-# Lambda Binaries Zip files
-lambda/bin
+# Lambda build artifacts (bootstrap binary + deployment zip)
+/bin
+
+# Scala / sbt build artifacts (client-scala). project/build.properties is
+# committed (pins the sbt version); target/ and .bsp are not.
+target/
+.bsp/

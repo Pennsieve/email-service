@@ -1,5 +1,24 @@
 #!groovy
 
+// CI for the email-service: the Go queue lambda (test, publish artifact, deploy
+// via service-deploy) and the Scala producer client in client-scala/ (test, and
+// publish to Nexus on main).
+//
+// RELEASE_VERSION (optional) publishes the Scala client as a release artifact
+// (com.pennsieve:email-client-scala) at that version; left blank, main builds
+// publish a -SNAPSHOT. Credentials come from the executor's environment
+// (PENNSIEVE_NEXUS_USER / PENNSIEVE_NEXUS_PW).
+
+properties([
+  parameters([
+    string(
+      name: 'RELEASE_VERSION',
+      defaultValue: '',
+      description: 'If set (e.g. 1.2.3), publish the Scala client as a release at this version. Blank = SNAPSHOT.'
+    )
+  ])
+])
+
 ansiColor('xterm') {
   node('executor') {
 
@@ -22,9 +41,28 @@ ansiColor('xterm') {
       }
     }
 
+    // Test the Scala client against the shared wire-contract fixtures.
+    stage("Test Scala client") {
+      dir("client-scala") {
+        sh "sbt -batch test"
+      }
+    }
+
     if(isMain) {
       stage ('Build and Push') {
         sh "IMAGE_TAG=${imageTag} make publish"
+      }
+
+      // Publish the Scala client to Nexus. With RELEASE_VERSION set it's a
+      // release; otherwise a SNAPSHOT (version defaults to bootstrap-SNAPSHOT).
+      stage("Publish Scala client") {
+        dir("client-scala") {
+          if (params.RELEASE_VERSION?.trim()) {
+            sh "sbt -batch -Dversion=${params.RELEASE_VERSION} publish"
+          } else {
+            sh "sbt -batch publish"
+          }
+        }
       }
 
       if(isRealService) {

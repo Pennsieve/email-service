@@ -1,0 +1,13 @@
+{
+  "messageId": "added-to-team",
+  "dedupeId": "team-invite-evt-12345",
+  "recipients": [
+    { "name": "Carol", "email": "carol@example.com" }
+  ],
+  "context": {
+    "administrator": "Dave",
+    "teamName": "Imaging",
+    "host": "app.pennsieve.io",
+    "organizationNodeId": "N:organization:abc"
+  }
+}

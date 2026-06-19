@@ -22,6 +22,55 @@ resource "aws_s3_bucket_policy" "email_templates_s3_bucket_policy" {
   policy = data.aws_iam_policy_document.email_templates_s3_bucket_policy_document.json
 }
 
+# Bucket (resource) policy for the email templates bucket. References the bucket
+# ARN directly to avoid hardcoding (the previous hardcoded ARN double-prefixed
+# "pennsieve-" and never matched the real bucket).
+data "aws_iam_policy_document" "email_templates_s3_bucket_policy_document" {
+  statement {
+    sid    = "AllowAccountRead"
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.terraform_remote_state.account.outputs.aws_account_id}:root"]
+    }
+
+    resources = [
+      aws_s3_bucket.email_templates_s3_bucket.arn,
+      "${aws_s3_bucket.email_templates_s3_bucket.arn}/*",
+    ]
+
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectAttributes",
+      "s3:ListBucket",
+    ]
+  }
+
+  statement {
+    sid    = "ForceSSLOnlyAccess"
+    effect = "Deny"
+
+    resources = [
+      aws_s3_bucket.email_templates_s3_bucket.arn,
+      "${aws_s3_bucket.email_templates_s3_bucket.arn}/*",
+    ]
+
+    actions = ["s3:*"]
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    condition {
+      test     = "Bool"
+      values   = ["false"]
+      variable = "aws:SecureTransport"
+    }
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "email_templates_s3_bucket_encryption" {
   bucket = aws_s3_bucket.email_templates_s3_bucket.bucket
 

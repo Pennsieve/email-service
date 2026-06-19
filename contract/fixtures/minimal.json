@@ -1,0 +1,11 @@
+{
+  "messageId": "dataset-publication-accepted",
+  "recipients": [
+    { "name": "Alice", "email": "alice@example.com" }
+  ],
+  "context": {
+    "datasetName": "My Dataset",
+    "reviewerName": "Bob",
+    "date": "2026-06-18"
+  }
+}
