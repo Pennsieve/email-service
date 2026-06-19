@@ -7,6 +7,11 @@
 ThisBuild / organization := "com.pennsieve"
 ThisBuild / scalaVersion := "2.13.16"
 
+// Coursier's HTTP handling against Nexus causes redirect loops on Jenkins
+// ("Server redirected too many times"); the classic Ivy resolver does not.
+// Mirrors pennsieve-api (set in both build.sbt and project/plugins.sbt).
+ThisBuild / useCoursier := false
+
 // Version is injected by CI (sbt -Dversion=1.2.3 publish); local/dev builds are
 // snapshots. Mirrors pennsieve-api.
 ThisBuild / version := sys.props.get("version").getOrElse("bootstrap-SNAPSHOT")
