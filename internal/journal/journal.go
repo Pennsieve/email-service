@@ -35,7 +35,7 @@ var ErrAlreadyClaimed = errors.New("entry already claimed")
 // email": one row per (message, recipient), carrying delivery Status, the SES
 // MessageId, any error, and a TTL (ExpiresAt) for configurable expiration.
 //
-// Id is the dedupe key (see models.EmailRequest.DedupeKey): using it as the
+// Id is the dedupe key (see client.EmailRequest.DedupeKey): using it as the
 // partition key lets Claim use a conditional PutItem as the dedupe guard.
 type Entry struct {
 	Id           string         `dynamodbav:"Id"`

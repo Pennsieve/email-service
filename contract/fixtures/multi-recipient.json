@@ -1,0 +1,15 @@
+{
+  "messageId": "dataset-proposal-submitted",
+  "recipients": [
+    { "name": "Reviewer One", "email": "rev1@example.com" },
+    { "name": "Reviewer Two", "email": "rev2@example.com" }
+  ],
+  "context": {
+    "AuthorName": "Erin",
+    "AuthorEmail": "erin@example.com",
+    "ProposalTitle": "A Study",
+    "WorkspaceName": "SPARC",
+    "WorkspaceNodeId": "N:organization:sparc",
+    "AppURL": "app.pennsieve.io"
+  }
+}

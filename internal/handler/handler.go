@@ -10,11 +10,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/pennsieve/email-service/client"
 	emailconfig "github.com/pennsieve/email-service/internal/config"
 	"github.com/pennsieve/email-service/internal/journal"
 	"github.com/pennsieve/email-service/internal/logging"
 	"github.com/pennsieve/email-service/internal/mailer"
-	"github.com/pennsieve/email-service/internal/models"
 	"github.com/pennsieve/email-service/internal/store"
 )
 
@@ -58,7 +58,7 @@ func ProcessEvent(ctx context.Context, cfg *emailconfig.Config, sqsEvent events.
 }
 
 func handleRecord(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, message events.SQSMessage) error {
-	var request models.EmailRequest
+	var request client.EmailRequest
 	if err := json.Unmarshal([]byte(message.Body), &request); err != nil {
 		return fmt.Errorf("error unmarshalling email request: %w", err)
 	}
@@ -109,7 +109,7 @@ func handleRecord(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger
 	return nil
 }
 
-func sendOne(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, request models.EmailRequest, subject, htmlBody, recipientEmail string) error {
+func sendOne(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, request client.EmailRequest, subject, htmlBody, recipientEmail string) error {
 	dedupeKey := request.DedupeKey(recipientEmail)
 	sentAt := now()
 
