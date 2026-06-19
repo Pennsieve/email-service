@@ -6,8 +6,16 @@
 //
 // RELEASE_VERSION (optional) publishes the Scala client as a release artifact
 // (com.pennsieve:email-client-scala) at that version; left blank, main builds
-// publish a -SNAPSHOT. Credentials come from the executor's environment
-// (PENNSIEVE_NEXUS_USER / PENNSIEVE_NEXUS_PW).
+// publish a -SNAPSHOT. Nexus credentials are bound from the Jenkins credential
+// 'pennsieve-nexus-ci-login' around every sbt invocation (resolve + publish),
+// matching pennsieve-api. Without them sbt hits Nexus unauthenticated and fails
+// with "Server redirected too many times".
+
+def pennsieveNexusCreds = usernamePassword(
+    credentialsId: 'pennsieve-nexus-ci-login',
+    usernameVariable: 'PENNSIEVE_NEXUS_USER',
+    passwordVariable: 'PENNSIEVE_NEXUS_PW'
+)
 
 properties([
   parameters([
@@ -42,9 +50,12 @@ ansiColor('xterm') {
     }
 
     // Test the Scala client against the shared wire-contract fixtures.
+    // Needs Nexus creds: sbt resolves dependencies (and plugins) from Nexus.
     stage("Test Scala client") {
-      dir("client-scala") {
-        sh "sbt -batch test"
+      withCredentials([pennsieveNexusCreds]) {
+        dir("client-scala") {
+          sh "sbt -batch test"
+        }
       }
     }
 
@@ -56,11 +67,13 @@ ansiColor('xterm') {
       // Publish the Scala client to Nexus. With RELEASE_VERSION set it's a
       // release; otherwise a SNAPSHOT (version defaults to bootstrap-SNAPSHOT).
       stage("Publish Scala client") {
-        dir("client-scala") {
-          if (params.RELEASE_VERSION?.trim()) {
-            sh "sbt -batch -Dversion=${params.RELEASE_VERSION} publish"
-          } else {
-            sh "sbt -batch publish"
+        withCredentials([pennsieveNexusCreds]) {
+          dir("client-scala") {
+            if (params.RELEASE_VERSION?.trim()) {
+              sh "sbt -batch -Dversion=${params.RELEASE_VERSION} publish"
+            } else {
+              sh "sbt -batch publish"
+            }
           }
         }
       }
