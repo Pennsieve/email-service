@@ -24,3 +24,4 @@
 # committed (pins the sbt version); target/ and .bsp are not.
 target/
 .bsp/
+*.swp
