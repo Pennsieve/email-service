@@ -59,18 +59,33 @@ com.pennsieve %% email-client-scala % <version>   // Scala 2.13
 Published to the Pennsieve Nexus (`nexus.pennsieve.cc`), same as pennsieve-api,
 so a consumer that already resolves Pennsieve artifacts needs no extra resolver.
 
-## Building & publishing
+## Versioning & publishing
+
+Releases are **intentional and tag-driven**. CI (the email-service `Jenkinsfile`)
+publishes to Nexus as follows:
+
+| Trigger | Publishes | Where |
+|---|---|---|
+| **git tag `vX.Y.Z`** (or a GitHub Release from it) | release `X.Y.Z` | `maven-releases` |
+| **merge to `main`** | next-minor `-SNAPSHOT` (latest `v1.2.0` → `1.3.0-SNAPSHOT`) | `maven-snapshots` |
+| other branches | nothing (test only) | — |
+
+Consumers pin a released semver (e.g. `com.pennsieve %% email-client-scala % "1.2.0"`),
+never a SNAPSHOT.
+
+**To cut a release:** tag the commit `vX.Y.Z` and push the tag (or publish a
+GitHub Release); CI publishes `X.Y.Z`. Use `v`-prefixed tags to match the house
+convention (e.g. pennsieve-go-core); the artifact version drops the `v`.
 
 ```bash
+# local builds (version comes from -Dversion; bare publish is a dev SNAPSHOT)
 sbt test                       # compile + run the contract tests
-sbt publish                    # publish a -SNAPSHOT to Nexus
-sbt -Dversion=1.2.3 publish    # publish release 1.2.3 to Nexus
+sbt -Dversion=1.2.3 publish    # publish 1.2.3 (needs Nexus creds in env)
 ```
 
 Publishing requires `PENNSIEVE_NEXUS_USER` / `PENNSIEVE_NEXUS_PW` in the
-environment (the Jenkins executor provides them). CI publishes from the
-email-service `Jenkinsfile`: every `main` build publishes a SNAPSHOT; pass the
-`RELEASE_VERSION` job parameter to cut a release.
+environment (the Jenkins executor provides them via the `pennsieve-nexus-ci-login`
+credential).
 
 ## Keeping in sync with the Go client
 
