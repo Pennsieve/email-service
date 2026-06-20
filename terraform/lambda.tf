@@ -5,10 +5,12 @@ resource "aws_lambda_function" "queue_lambda" {
   runtime       = "provided.al2"
   architectures = ["arm64"]
   role          = aws_iam_role.queue_lambda_role.arn
-  timeout       = 300
-  memory_size   = 128
-  s3_bucket     = var.lambda_bucket
-  s3_key        = "${var.service_name}/${var.service_name}-${var.image_tag}.zip"
+  # Sending an email is quick; 150s is generous headroom. The SQS queue's
+  # visibility timeout (sqs.tf) must stay greater than this — keep them in sync.
+  timeout     = 150
+  memory_size = 128
+  s3_bucket   = var.lambda_bucket
+  s3_key      = "${var.service_name}/${var.service_name}-${var.image_tag}.zip"
 
   vpc_config {
     subnet_ids         = tolist(data.terraform_remote_state.vpc.outputs.private_subnet_ids)

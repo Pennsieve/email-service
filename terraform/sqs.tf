@@ -1,11 +1,16 @@
 resource "aws_sqs_queue" "email_service_queue" {
-  name                       = "${var.environment_name}-${var.service_name}-queue-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
-  delay_seconds              = 5
-  max_message_size           = 262144
-  message_retention_seconds  = 86400
-  kms_master_key_id          = "alias/${var.environment_name}-${var.service_name}-queue-key-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
-  receive_wait_time_seconds  = 10
-  visibility_timeout_seconds = 30
+  name                      = "${var.environment_name}-${var.service_name}-queue-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+  delay_seconds             = 5
+  max_message_size          = 262144
+  message_retention_seconds = 86400
+  kms_master_key_id         = "alias/${var.environment_name}-${var.service_name}-queue-key-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+  receive_wait_time_seconds = 10
+  # Must be > the queue lambda's function timeout (150s in lambda.tf), or the
+  # Lambda event source mapping is rejected: "Queue visibility timeout is less
+  # than Function timeout". Set to 3x the lambda timeout so a near-timeout
+  # invocation isn't redelivered while still running. Update both together if
+  # either changes.
+  visibility_timeout_seconds = 450
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.email_service_deadletter_queue.arn
     maxReceiveCount     = 3
