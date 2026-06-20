@@ -6,7 +6,16 @@ resource "aws_sqs_queue" "email_service_queue" {
   kms_master_key_id          = "alias/${var.environment_name}-${var.service_name}-queue-key-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 30
-  redrive_policy             = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.email_service_deadletter_queue.arn}\",\"maxReceiveCount\":3}"
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.email_service_deadletter_queue.arn
+    maxReceiveCount     = 3
+  })
+
+  # The redrive_policy references the DLQ's ARN, but on a first apply SQS is
+  # eventually consistent: the DLQ's CreateQueue can return before its ARN is
+  # resolvable, so the main queue's CreateQueue fails with "Dead letter target
+  # does not exist". Force strict ordering so the DLQ is fully created first.
+  depends_on = [aws_sqs_queue.email_service_deadletter_queue]
 }
 
 resource "aws_sqs_queue" "email_service_deadletter_queue" {
