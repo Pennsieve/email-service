@@ -12,9 +12,10 @@ ThisBuild / scalaVersion := "2.13.16"
 // Mirrors pennsieve-api (set in both build.sbt and project/plugins.sbt).
 ThisBuild / useCoursier := false
 
-// Version is injected by CI (sbt -Dversion=1.2.3 publish); local/dev builds are
-// snapshots. Mirrors pennsieve-api.
-ThisBuild / version := sys.props.get("version").getOrElse("bootstrap-SNAPSHOT")
+// CI always injects the version (sbt -Dversion=X.Y.Z publish): a vX.Y.Z tag
+// publishes the release X.Y.Z; a main build publishes the next-minor -SNAPSHOT
+// (see the Jenkinsfile). The fallback only applies to a bare local `sbt publish`.
+ThisBuild / version := sys.props.get("version").getOrElse("0.0.0-SNAPSHOT")
 
 // Publish to the Pennsieve Nexus, same as pennsieve-api. Credentials come from
 // the environment (the Jenkins executor provides them) — no creds in the repo.
