@@ -23,24 +23,41 @@ type Mailer interface {
 	Send(ctx context.Context, email Email) (messageId string, err error)
 }
 
-// SESMailer sends email through Amazon SES, mirroring the conventions used by
-// the rehydration-service emailer (HTML body, UTF-8, support@{domain} sender).
-type SESMailer struct {
-	client *ses.Client
-	sender string
+// SESAPI is the subset of the SES client this package uses. *ses.Client
+// satisfies it; tests provide a fake.
+type SESAPI interface {
+	SendEmail(ctx context.Context, params *ses.SendEmailInput, optFns ...func(*ses.Options)) (*ses.SendEmailOutput, error)
 }
 
-// NewSESMailer constructs a mailer that sends from support@{pennsieveDomain}.
-func NewSESMailer(client *ses.Client, pennsieveDomain string) *SESMailer {
+// senderDisplayName is the friendly name shown on the From address, e.g.
+// "Pennsieve <support@pennsieve.io>".
+const senderDisplayName = "Pennsieve"
+
+// SESMailer sends email through Amazon SES. It sends from
+// "Pennsieve <support@{domain}>" and sets Reply-To to support@{domain}.
+type SESMailer struct {
+	client SESAPI
+	// sender is the bare address (support@{domain}) — used for Reply-To and in
+	// error messages. from is the display-name form used as the SES Source.
+	sender string
+	from   string
+}
+
+// NewSESMailer constructs a mailer that sends from
+// "Pennsieve <support@{pennsieveDomain}>" with Reply-To support@{pennsieveDomain}.
+func NewSESMailer(client SESAPI, pennsieveDomain string) *SESMailer {
+	sender := fmt.Sprintf("support@%s", pennsieveDomain)
 	return &SESMailer{
 		client: client,
-		sender: fmt.Sprintf("support@%s", pennsieveDomain),
+		sender: sender,
+		from:   fmt.Sprintf("%s <%s>", senderDisplayName, sender),
 	}
 }
 
 func (m *SESMailer) Send(ctx context.Context, email Email) (string, error) {
 	out, err := m.client.SendEmail(ctx, &ses.SendEmailInput{
-		Source: aws.String(m.sender),
+		Source:           aws.String(m.from),
+		ReplyToAddresses: []string{m.sender},
 		Destination: &sestypes.Destination{
 			ToAddresses: []string{email.Recipient},
 		},
