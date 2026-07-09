@@ -176,7 +176,7 @@ event source mapping with `ReportBatchItemFailures`).
 
 | Variable | Description |
 |----------|-------------|
-| `PENNSIEVE_DOMAIN` | DNS domain the service runs in (used for the `support@` sender) |
+| `PENNSIEVE_DOMAIN` | DNS domain the service runs in; sets the sender `Pennsieve <support@{domain}>` and `Reply-To: support@{domain}` |
 | `S3_BUCKET` | S3 bucket holding the compiled email templates |
 | `TEMPLATES_TABLE` | DynamoDB table mapping `messageId` → template file + subject |
 | `JOURNAL_TABLE` | DynamoDB table journaling sent messages (`email-message-log`) |
