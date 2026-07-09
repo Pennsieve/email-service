@@ -181,6 +181,7 @@ event source mapping with `ReportBatchItemFailures`).
 | `TEMPLATES_TABLE` | DynamoDB table mapping `messageId` → template file + subject |
 | `JOURNAL_TABLE` | DynamoDB table journaling sent messages (`email-message-log`) |
 | `JOURNAL_TTL_DAYS` | retention for journal rows before TTL expiry (default 90) |
+| `LOG_LEVEL` | slog level: `DEBUG`/`INFO`/`WARN`/`ERROR` (default `INFO`) |
 
 ### Table: `email-message-templates`
 Maps `messageId` to a template file in S3 and the default *subject* line. The
@@ -244,6 +245,26 @@ ENV=dev ./scripts/email-log.sh id 'abc123:jane@example.com'
 Read the `Status` on the returned row(s): no row means the send was never
 queued; `FAILED` shows the `Error`; `SENT` includes the `SesMessageId` to trace
 delivery in SES.
+
+### Manually invoking the lambda (AWS Console "Test")
+
+The handler receives an **SQS event envelope**, not a raw `EmailRequest`. The
+`EmailRequest` JSON must be the (string-escaped) `body` of a record:
+
+```json
+{ "Records": [ { "body": "{\"messageId\":\"...\", ...}" } ] }
+```
+
+A ready-to-use sample lives at [`testdata/sqs-event.json`](testdata/sqs-event.json)
+— paste it into the Lambda **Test** event (edit the `body` for your case).
+
+A raw `EmailRequest` (no `Records` wrapper) is **not an error** — the handler
+just finds zero records and returns silently (no journal row, no send). The
+`processing SQS event` log line reports `recordCount`; a `recordCount=0` means
+the payload wasn't wrapped correctly. The handler also logs each step
+(parsed request → resolved mapping → fetched template → rendered → claiming
+send → email sent) at INFO, so a real invocation is fully traceable in
+CloudWatch.
 
 ## Possible future additions
 

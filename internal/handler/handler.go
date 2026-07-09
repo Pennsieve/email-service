@@ -45,6 +45,12 @@ func EmailQueueHandler(ctx context.Context, sqsEvent events.SQSEvent) (events.SQ
 // returns the batch item failures. It is exported (and takes an explicit
 // config) so tests can drive it with mocked collaborators.
 func ProcessEvent(ctx context.Context, cfg *emailconfig.Config, sqsEvent events.SQSEvent) events.SQSEventResponse {
+	// Log the batch size up front. A count of 0 means the invocation carried no
+	// SQS records — e.g. a Lambda "Test" payload that wasn't wrapped in the SQS
+	// event envelope ({"Records":[{"body":"..."}]}) — which otherwise looks like
+	// a silent success (no journal write, no send, no error).
+	logger.Info("processing SQS event", slog.Int("recordCount", len(sqsEvent.Records)))
+
 	var response events.SQSEventResponse
 	for _, message := range sqsEvent.Records {
 		recordLogger := logger.With(slog.String("sqsMessageId", message.MessageId))
@@ -69,12 +75,16 @@ func handleRecord(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger
 		return fmt.Errorf("email request %s has no recipients", request.MessageId)
 	}
 	log = log.With(slog.String("messageId", request.MessageId))
+	log.Info("parsed email request", slog.Int("recipientCount", len(request.Recipients)))
 
 	// 1. messageId -> template file + default subject
 	mapping, err := cfg.TemplateStore().GetMapping(ctx, request.MessageId)
 	if err != nil {
 		return err
 	}
+	log.Info("resolved template mapping",
+		slog.String("templateFile", mapping.TemplateFile),
+		slog.String("defaultSubject", mapping.Subject))
 
 	// 2. resolve organization branding and fetch the template body
 	orgId, hasOrg := request.OrganizationId()
@@ -82,6 +92,10 @@ func handleRecord(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger
 	if err != nil {
 		return err
 	}
+	log.Info("fetched template body",
+		slog.Bool("orgBrandingRequested", hasOrg),
+		slog.Int64("organizationId", orgId),
+		slog.Int("bytes", len(body)))
 
 	// 3. render once; the same rendered body is sent to every recipient
 	htmlBody, err := store.Render(request.MessageId, body, request.Context)
@@ -95,6 +109,7 @@ func handleRecord(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger
 	if err != nil {
 		return err
 	}
+	log.Info("rendered template", slog.String("subject", subject), slog.Int("htmlBytes", len(htmlBody)))
 
 	// 4. for each recipient: claim (idempotency guard) -> send -> mark.
 	for _, recipient := range request.Recipients {
@@ -112,6 +127,7 @@ func handleRecord(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger
 func sendOne(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, request client.EmailRequest, subject, htmlBody, recipientEmail string) error {
 	dedupeKey := request.DedupeKey(recipientEmail)
 	sentAt := now()
+	log.Info("claiming send", slog.String("recipient", recipientEmail), slog.String("dedupeKey", dedupeKey))
 
 	// Claim is a conditional write: if a row for this dedupe key already exists,
 	// this (message, recipient) was already processed on an earlier delivery, so

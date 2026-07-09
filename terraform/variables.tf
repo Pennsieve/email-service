@@ -23,6 +23,11 @@ variable "journal_ttl_days" {
   default = 90
 }
 
+# slog level for the queue lambda: DEBUG | INFO | WARN | ERROR.
+variable "log_level" {
+  default = "INFO"
+}
+
 locals {
   domain_name = data.terraform_remote_state.account.outputs.domain_name
   hosted_zone = data.terraform_remote_state.account.outputs.public_hosted_zone_id

@@ -26,6 +26,9 @@ resource "aws_lambda_function" "queue_lambda" {
       TEMPLATES_TABLE  = aws_dynamodb_table.email_message_templates_table.name
       JOURNAL_TABLE    = aws_dynamodb_table.email_message_log_table.name
       JOURNAL_TTL_DAYS = var.journal_ttl_days
+      # slog level read by internal/logging (DEBUG|INFO|WARN|ERROR); defaults to
+      # INFO in code, so this just makes it overridable per environment.
+      LOG_LEVEL = var.log_level
     }
   }
 }
