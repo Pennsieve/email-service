@@ -1,0 +1,14 @@
+{
+  "Records": [
+    {
+      "messageId": "test-1",
+      "receiptHandle": "test",
+      "body": "{\"messageId\":\"dataset-publication-accepted\",\"dedupeId\":\"21d0d032-574c-4e35-9eb0-91e065a668be\",\"recipients\":[{\"name\":\"Michael Uftring\",\"email\":\"michael.uftring@gmail.com\"}],\"context\":{\"organizationId\":19,\"datasetName\":\"No Such Dataset\",\"reviewerName\":\"Nobody\",\"date\":\"2026-07-08\"}}",
+      "attributes": {},
+      "messageAttributes": {},
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:us-east-1:000000000000:dev-email-service-queue-use1",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}
