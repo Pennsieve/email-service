@@ -181,6 +181,7 @@ event source mapping with `ReportBatchItemFailures`).
 | `TEMPLATES_TABLE` | DynamoDB table mapping `messageId` → template file + subject |
 | `JOURNAL_TABLE` | DynamoDB table journaling sent messages (`email-message-log`) |
 | `JOURNAL_TTL_DAYS` | retention for journal rows before TTL expiry (default 90) |
+| `LOG_LEVEL` | slog level: `DEBUG`/`INFO`/`WARN`/`ERROR` (default `INFO`) |
 
 ### Table: `email-message-templates`
 Maps `messageId` to a template file in S3 and the default *subject* line. The
