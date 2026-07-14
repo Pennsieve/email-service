@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-change-of-dataset-owner",
+      "body": "{\"messageId\":\"change-of-dataset-owner\",\"dedupeId\":\"verify-change-of-dataset-owner\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"datasetNodeId\":\"SAMPLE_datasetNodeId\",\"host\":\"SAMPLE_host\",\"organizationName\":\"SAMPLE_organizationName\",\"organizationNodeId\":\"SAMPLE_organizationNodeId\",\"previousOwnerName\":\"SAMPLE_previousOwnerName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

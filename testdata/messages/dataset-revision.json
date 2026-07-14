@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-dataset-revision",
+      "body": "{\"messageId\":\"dataset-revision\",\"dedupeId\":\"verify-dataset-revision\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetNodeId\":\"SAMPLE_datasetNodeId\",\"discoverDatasetId\":\"SAMPLE_discoverDatasetId\",\"discoverHost\":\"SAMPLE_discoverHost\",\"host\":\"SAMPLE_host\",\"organizationNodeId\":\"SAMPLE_organizationNodeId\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

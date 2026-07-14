@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-dataset-proposal-submitted",
+      "body": "{\"messageId\":\"dataset-proposal-submitted\",\"dedupeId\":\"verify-dataset-proposal-submitted\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"AppURL\":\"SAMPLE_AppURL\",\"AuthorEmail\":\"SAMPLE_AuthorEmail\",\"AuthorName\":\"SAMPLE_AuthorName\",\"ProposalTitle\":\"SAMPLE_ProposalTitle\",\"WorkspaceName\":\"SAMPLE_WorkspaceName\",\"WorkspaceNodeId\":\"SAMPLE_WorkspaceNodeId\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

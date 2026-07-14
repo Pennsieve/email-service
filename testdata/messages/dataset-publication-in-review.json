@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-dataset-publication-in-review",
+      "body": "{\"messageId\":\"dataset-publication-in-review\",\"dedupeId\":\"verify-dataset-publication-in-review\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"datasetNodeId\":\"SAMPLE_datasetNodeId\",\"date\":\"SAMPLE_date\",\"host\":\"SAMPLE_host\",\"organizationNodeId\":\"SAMPLE_organizationNodeId\",\"ownerName\":\"SAMPLE_ownerName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}
