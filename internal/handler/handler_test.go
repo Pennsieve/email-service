@@ -58,10 +58,11 @@ func (m *mockMailer) Send(_ context.Context, email mailer.Email) (string, error)
 // mockJournal records claim/mark calls. claimErr (if set) is returned by Claim
 // to simulate either a duplicate (journal.ErrAlreadyClaimed) or an error.
 type mockJournal struct {
-	claimed  []journal.Entry
-	sent     []string
-	failed   []string
-	claimErr error
+	claimed    []journal.Entry
+	sent       []string
+	failed     []string
+	loggedOnly []string
+	claimErr   error
 }
 
 func (m *mockJournal) Claim(_ context.Context, entry journal.Entry) error {
@@ -80,6 +81,20 @@ func (m *mockJournal) MarkSent(_ context.Context, id, _ /*ses*/, _ /*sent*/ stri
 func (m *mockJournal) MarkFailed(_ context.Context, id, _ string) error {
 	m.failed = append(m.failed, id)
 	return nil
+}
+
+func (m *mockJournal) MarkLoggedOnly(_ context.Context, id, _ string) error {
+	m.loggedOnly = append(m.loggedOnly, id)
+	return nil
+}
+
+// mockSuppression suppresses any address in its set.
+type mockSuppression struct {
+	suppressed map[string]bool
+}
+
+func (m *mockSuppression) IsSuppressed(_ context.Context, email string) (bool, error) {
+	return m.suppressed[email], nil
 }
 
 // statefulJournal models the real DynamoDB Claim condition: a claim succeeds
@@ -115,12 +130,20 @@ func (m *statefulJournal) MarkFailed(_ context.Context, id, _ string) error {
 	return nil
 }
 
+func (m *statefulJournal) MarkLoggedOnly(_ context.Context, id, _ string) error {
+	m.status[id] = journal.StatusSent
+	return nil
+}
+
 func newTestConfig(ts templates.Store, bs *mockBodyStore, ml mailer.Mailer, jr journal.Journal) *emailconfig.Config {
-	cfg := emailconfig.NewConfig(aws.Config{}, emailconfig.Env{JournalTTLDays: 90})
+	// SendEnabled true + an empty suppression list = the normal "send" path, so
+	// existing tests are unaffected. Send-control tests override these.
+	cfg := emailconfig.NewConfig(aws.Config{}, emailconfig.Env{JournalTTLDays: 90, SendEnabled: true})
 	cfg.SetTemplateStore(ts)
 	cfg.SetBodyStore(bs)
 	cfg.SetMailer(ml)
 	cfg.SetJournal(jr)
+	cfg.SetSuppression(&mockSuppression{suppressed: map[string]bool{}})
 	return cfg
 }
 
@@ -178,6 +201,67 @@ func TestSendToMultipleRecipients(t *testing.T) {
 	assert.Equal(t, time.Unix(1700000000, 0).UTC().AddDate(0, 0, 90).Unix(), jr.claimed[0].ExpiresAt)
 	// distinct dedupe keys per recipient
 	assert.NotEqual(t, jr.claimed[0].Id, jr.claimed[1].Id)
+}
+
+// --- send controls -------------------------------------------------------
+
+const oneRecipientBody = `{"messageId":"m","recipients":[{"email":"a@x.com"}],"context":{}}`
+
+// Service-level: SEND_ENABLED=false → journaled as log-only, SES never called.
+func TestServiceSendDisabledIsLogOnly(t *testing.T) {
+	ts := &mockTemplateStore{mapping: &templates.Mapping{TemplateFile: "f.html", Subject: "S"}}
+	bs := &mockBodyStore{body: []byte("body")}
+	ml := &mockMailer{}
+	jr := &mockJournal{}
+	cfg := newTestConfig(ts, bs, ml, jr)
+	cfg.Env.SendEnabled = false
+
+	resp := ProcessEvent(context.Background(), cfg, sqsEvent(oneRecipientBody))
+
+	assert.Empty(t, resp.BatchItemFailures)
+	assert.Empty(t, ml.sent, "must not send via SES when service is disabled")
+	require.Len(t, jr.claimed, 1)
+	assert.True(t, jr.claimed[0].LoggedOnly, "claim marked LoggedOnly")
+	require.Len(t, jr.loggedOnly, 1, "marked logged-only, not sent")
+	assert.Empty(t, jr.sent)
+}
+
+// Template-level: mapping.SendDisabled → log-only for that message type.
+func TestTemplateSendDisabledIsLogOnly(t *testing.T) {
+	ts := &mockTemplateStore{mapping: &templates.Mapping{TemplateFile: "f.html", Subject: "S", SendDisabled: true}}
+	bs := &mockBodyStore{body: []byte("body")}
+	ml := &mockMailer{}
+	jr := &mockJournal{}
+
+	resp := ProcessEvent(context.Background(), newTestConfig(ts, bs, ml, jr), sqsEvent(oneRecipientBody))
+
+	assert.Empty(t, resp.BatchItemFailures)
+	assert.Empty(t, ml.sent, "must not send a send-disabled template")
+	require.Len(t, jr.claimed, 1)
+	assert.True(t, jr.claimed[0].LoggedOnly)
+	require.Len(t, jr.loggedOnly, 1)
+}
+
+// Address-level: per-recipient — a suppressed recipient is log-only while other
+// recipients on the same message are still sent.
+func TestSuppressedRecipientIsLogOnlyPerRecipient(t *testing.T) {
+	ts := &mockTemplateStore{mapping: &templates.Mapping{TemplateFile: "f.html", Subject: "S"}}
+	bs := &mockBodyStore{body: []byte("body")}
+	ml := &mockMailer{}
+	jr := &mockJournal{}
+	cfg := newTestConfig(ts, bs, ml, jr)
+	cfg.SetSuppression(&mockSuppression{suppressed: map[string]bool{"blocked@x.com": true}})
+
+	body := `{"messageId":"m","recipients":[{"email":"ok@x.com"},{"email":"blocked@x.com"}],"context":{}}`
+	resp := ProcessEvent(context.Background(), cfg, sqsEvent(body))
+
+	assert.Empty(t, resp.BatchItemFailures)
+	// ok@x.com sent; blocked@x.com logged-only
+	require.Len(t, ml.sent, 1)
+	assert.Equal(t, "ok@x.com", ml.sent[0].Recipient)
+	require.Len(t, jr.sent, 1)
+	require.Len(t, jr.loggedOnly, 1)
+	require.Len(t, jr.claimed, 2)
 }
 
 func TestDuplicateIsSkipped(t *testing.T) {

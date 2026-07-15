@@ -28,6 +28,13 @@ variable "log_level" {
   default = "INFO"
 }
 
+# Service-level send switch. "false" makes the whole service log-only (every
+# request is still journaled, but nothing is delivered via SES). Any other
+# value (default) leaves sending enabled.
+variable "send_enabled" {
+  default = "true"
+}
+
 locals {
   domain_name = data.terraform_remote_state.account.outputs.domain_name
   hosted_zone = data.terraform_remote_state.account.outputs.public_hosted_zone_id
