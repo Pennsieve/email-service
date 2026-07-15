@@ -47,7 +47,9 @@ Per SQS record the consumer:
    (`text/template`; a `context.subject` overrides the default).
 4. **Sends and journals, per recipient** — a conditional write *claims* the
    send (the idempotency guard), then SES delivers, then the row is marked
-   `SENT`/`FAILED`.
+   `SENT`/`FAILED`. If a [send control](#send-controls) is active the delivery is
+   skipped and the row is marked log-only instead — every request is journaled
+   regardless.
 
 **Idempotency & retries.** Each (message, recipient) has a dedupe key. The claim
 is a conditional `PutItem`: a duplicate SQS redelivery of an already-`SENT`/
@@ -182,6 +184,24 @@ event source mapping with `ReportBatchItemFailures`).
 | `JOURNAL_TABLE` | DynamoDB table journaling sent messages (`email-message-log`) |
 | `JOURNAL_TTL_DAYS` | retention for journal rows before TTL expiry (default 90) |
 | `LOG_LEVEL` | slog level: `DEBUG`/`INFO`/`WARN`/`ERROR` (default `INFO`) |
+| `SEND_ENABLED` | service-level send switch; `false` = log-only for the whole service (default enabled) |
+| `SUPPRESSION_TABLE` | DynamoDB table of suppressed recipient addresses (`email-suppression`) |
+
+### Send controls
+
+Three independent controls can suppress actual delivery. **Under all of them the
+request is still journaled** — a suppressed send is *logged-only*, not dropped —
+and its journal row carries `LoggedOnly=true` (absent = truly sent). Any one
+control being active makes the send log-only:
+
+| Level | Mechanism | Scope |
+|---|---|---|
+| Service | `SEND_ENABLED=false` env var | whole service |
+| Template | `SendDisabled=true` attribute on the `email-message-templates` item | one messageId |
+| Address | a row in the `email-suppression` table (keyed by email) | one recipient |
+
+Service and template controls make the whole message log-only; address
+suppression is per-recipient (others on the same message still send).
 
 ### Table: `email-message-templates`
 Maps `messageId` to a template file in S3 and the default *subject* line. The
@@ -191,6 +211,7 @@ default subject may be overridden by a `subject` in the message `context`.
 - `MessageId`: String, slug-style
 - `Subject`: String, the default subject line for the email message
 - `TemplateFile`: String, the name of the template file
+- `SendDisabled`: Bool (optional) — when `true`, this message type is log-only (not delivered). Absent = sending enabled.
 
 #### Keys
 - **Partition Key**: `MessageId`
@@ -216,6 +237,20 @@ email"). Rows expire via a DynamoDB TTL after `JOURNAL_TTL_DAYS` (default 90).
 - `Error`: String, the failure detail, set on `FAILED`
 - `Context`: Map of String (name -> value)
 - `ExpiresAt`: Int64 (Unix epoch seconds), DynamoDB TTL attribute
+- `LoggedOnly`: Bool (optional) — `true` when a send control suppressed delivery (the row was journaled but not sent via SES). Absent = truly sent.
+
+### Table: `email-suppression`
+The address-level send control: a recipient with a row here is not delivered to
+(the request is still journaled, `LoggedOnly`). Edited operationally without a
+deploy.
+
+#### Item Attributes
+- `Email`: String, the suppressed recipient address
+- `Reason`: String (optional), why it was suppressed
+- `CreatedAt`: String (optional), when it was added
+
+#### Keys
+- **Partition Key**: `Email`
 
 #### Keys
 - **Partition Key**: `Id`

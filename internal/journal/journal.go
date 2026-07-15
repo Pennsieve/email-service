@@ -49,6 +49,10 @@ type Entry struct {
 	Error        string         `dynamodbav:"Error,omitempty"`
 	Context      map[string]any `dynamodbav:"Context,omitempty"`
 	ExpiresAt    int64          `dynamodbav:"ExpiresAt"`
+	// LoggedOnly marks a request that was journaled but not actually sent via
+	// SES because a send control suppressed it (service disabled, template
+	// disabled, or recipient suppressed). Absent (false) means truly sent.
+	LoggedOnly bool `dynamodbav:"LoggedOnly,omitempty"`
 }
 
 // SentAtKey returns the GSI (RecipientSentAtIndex) sort key for a timestamp: the
@@ -69,6 +73,10 @@ type Journal interface {
 	MarkSent(ctx context.Context, id string, sesMessageId, messageSent string) error
 	// MarkFailed updates the entry to FAILED with the error detail.
 	MarkFailed(ctx context.Context, id string, sendErr string) error
+	// MarkLoggedOnly completes a log-only entry: Status SENT (processed
+	// successfully) but no SES delivery. The LoggedOnly flag set at Claim time
+	// distinguishes it from a real send (no SesMessageId).
+	MarkLoggedOnly(ctx context.Context, id string, messageSent string) error
 }
 
 // DynamoJournal is a Journal backed by the email-message-log DynamoDB table.
@@ -131,6 +139,27 @@ func (j *DynamoJournal) MarkSent(ctx context.Context, id, sesMessageId, messageS
 	})
 	if err != nil {
 		return fmt.Errorf("error marking journal entry %s sent: %w", id, err)
+	}
+	return nil
+}
+
+func (j *DynamoJournal) MarkLoggedOnly(ctx context.Context, id, messageSent string) error {
+	// Status SENT = processed successfully; no SesMessageId is set. The
+	// LoggedOnly flag (written at Claim) is what marks it as not delivered.
+	_, err := j.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName:        aws.String(j.table),
+		Key:              key(id),
+		UpdateExpression: aws.String("SET #s = :status, MessageSent = :sent"),
+		ExpressionAttributeNames: map[string]string{
+			"#s": "Status",
+		},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":status": &types.AttributeValueMemberS{Value: string(StatusSent)},
+			":sent":   &types.AttributeValueMemberS{Value: messageSent},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("error marking journal entry %s logged-only: %w", id, err)
 	}
 	return nil
 }
