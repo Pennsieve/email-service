@@ -157,6 +157,17 @@ func sendOne(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, req
 			logOnlyReason = "recipient suppressed"
 		}
 	}
+
+	// Rate safeguard: only consume the rate budget for sends we'd actually make
+	// (skip if already log-only). Over-limit — or a rate-counter error — makes
+	// this send log-only rather than risking the SES account. This fails CLOSED
+	// on purpose: if we can't confirm we're under the cap, we don't send.
+	if logOnlyReason == "" {
+		if reason := rateLimitReason(ctx, cfg, log, request.MessageId); reason != "" {
+			logOnlyReason = reason
+		}
+	}
+
 	logOnly := logOnlyReason != ""
 
 	log.Info("claiming send",
@@ -220,4 +231,39 @@ func sendOne(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, req
 	}
 	log.Info("email sent", slog.String("recipient", recipientEmail), slog.String("sesMessageId", sesMessageId))
 	return nil
+}
+
+const rateWindow = time.Minute
+
+// rateLimitReason returns a non-empty log-only reason when the send-rate
+// safeguard trips: the account-wide window cap, a per-messageId cap, or a
+// rate-counter error (fail closed). A tripped limit is logged at WARN with a
+// "rate limit exceeded" marker so a CloudWatch metric filter / alarm can fire —
+// this is the signal that a producer may be looping. Each check that is
+// configured (limit > 0) counts one against its window.
+func rateLimitReason(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, messageId string) string {
+	check := func(key string, limit int) string {
+		if limit <= 0 {
+			return "" // disabled
+		}
+		allowed, err := cfg.Limiter().Allow(ctx, key, limit, rateWindow)
+		if err != nil {
+			// Fail closed: if we cannot confirm we are under the cap, do not send.
+			log.Error("rate limit check failed; failing closed to log-only",
+				slog.String("key", key), slog.Any("error", err))
+			return "rate limit check unavailable"
+		}
+		if !allowed {
+			log.Warn("rate limit exceeded",
+				slog.String("key", key), slog.Int("limitPerMinute", limit))
+			return "rate limit exceeded"
+		}
+		return ""
+	}
+	// Global account-wide cap first (what SES actually measures), then the
+	// optional per-messageId cap (to catch which message type is flooding).
+	if reason := check("global", cfg.Env.SendRateLimitPerMinute); reason != "" {
+		return reason
+	}
+	return check("msg#"+messageId, cfg.Env.PerMessageRateLimitPerMinute)
 }

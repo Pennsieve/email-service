@@ -186,6 +186,9 @@ event source mapping with `ReportBatchItemFailures`).
 | `LOG_LEVEL` | slog level: `DEBUG`/`INFO`/`WARN`/`ERROR` (default `INFO`) |
 | `SEND_ENABLED` | service-level send switch; `false` = log-only for the whole service (default enabled) |
 | `SUPPRESSION_TABLE` | DynamoDB table of suppressed recipient addresses (`email-suppression`) |
+| `RATE_LIMIT_TABLE` | DynamoDB table of send-rate window counters (`email-rate-counter`) |
+| `SEND_RATE_LIMIT_PER_MINUTE` | account-wide cap on emails handed to SES per minute; `0` disables (default 300) |
+| `PER_MESSAGE_RATE_LIMIT_PER_MINUTE` | optional per-`messageId` cap per minute; `0` disables (default 120) |
 
 ### Send controls
 
@@ -202,6 +205,24 @@ control being active makes the send log-only:
 
 Service and template controls make the whole message log-only; address
 suppression is per-recipient (others on the same message still send).
+
+### Rate safeguard
+
+A fourth guard protects the **SES account** (whose reputation/quota is expensive
+to recover if suspended) from a producer stuck in a loop. Dedupe only stops
+*identical* repeats; a loop that varies context (dates, ids) or fans out across
+recipients produces distinct sends that dedupe won't catch — this is the backstop.
+
+Before each SES send the handler counts it against a per-minute window in the
+`email-rate-counter` table (an account-wide counter, plus an optional
+per-`messageId` counter). If a cap is exceeded — **or the counter check itself
+errors** — the send is made **log-only** rather than delivered. It fails *closed*
+on purpose: if we can't confirm we're under the cap, we don't send. A tripped
+limit logs `rate limit exceeded` (WARN), which a CloudWatch metric filter + alarm
+turn into a page.
+
+Caps are env vars (`SEND_RATE_LIMIT_PER_MINUTE`, `PER_MESSAGE_RATE_LIMIT_PER_MINUTE`;
+`0` disables), tunable per environment without a code deploy.
 
 ### Table: `email-message-templates`
 Maps `messageId` to a template file in S3 and the default *subject* line. The
@@ -251,6 +272,19 @@ deploy.
 
 #### Keys
 - **Partition Key**: `Email`
+
+### Table: `email-rate-counter`
+The rate safeguard's counters: one short-lived row per (counter key, time
+window). The handler does an atomic `ADD` per send and compares to the cap; rows
+expire via TTL so only current windows persist.
+
+#### Item Attributes
+- `Bucket`: String, `<key>#<window-epoch>` (e.g. `global#28...`, `msg#welcome#28...`)
+- `Count`: Number, sends counted in this window
+- `ExpiresAt`: Int64 (Unix epoch seconds), DynamoDB TTL attribute
+
+#### Keys
+- **Partition Key**: `Bucket`
 
 #### Keys
 - **Partition Key**: `Id`
