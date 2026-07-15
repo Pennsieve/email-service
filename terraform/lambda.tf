@@ -52,3 +52,41 @@ resource "aws_lambda_event_source_mapping" "queue_lambda_sqs_trigger" {
   batch_size              = 10
   function_response_types = ["ReportBatchItemFailures"]
 }
+
+# Bounce/complaint handler: SES publishes bounce & complaint notifications to an
+# SNS topic; this lambda adds the affected addresses to the suppression table.
+resource "aws_lambda_function" "bounce_lambda" {
+  description   = "email-service bounce/complaint handler - suppresses addresses SES reports as bounced or complained"
+  function_name = "${var.environment_name}-${var.service_name}-bounce-lambda-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  architectures = ["arm64"]
+  role          = aws_iam_role.bounce_lambda_role.arn
+  timeout       = 60
+  memory_size   = 128
+  s3_bucket     = var.lambda_bucket
+  s3_key        = "${var.service_name}/${var.service_name}-bounce-${var.image_tag}.zip"
+
+  environment {
+    variables = {
+      ENV               = var.environment_name
+      REGION            = var.aws_region
+      SUPPRESSION_TABLE = aws_dynamodb_table.email_suppression_table.name
+    }
+  }
+}
+
+# Let SNS invoke the bounce lambda.
+resource "aws_lambda_permission" "bounce_lambda_sns" {
+  statement_id  = "AllowSNSInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.bounce_lambda.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.email_bounce_topic.arn
+}
+
+resource "aws_sns_topic_subscription" "bounce_lambda_subscription" {
+  topic_arn = aws_sns_topic.email_bounce_topic.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.bounce_lambda.arn
+}

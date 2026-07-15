@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -21,9 +22,12 @@ type Record struct {
 	CreatedAt string `dynamodbav:"CreatedAt,omitempty"`
 }
 
-// Store reports whether an email address is suppressed.
+// Store reports whether an email address is suppressed, and can add addresses
+// to the suppression list.
 type Store interface {
 	IsSuppressed(ctx context.Context, email string) (bool, error)
+	// Suppress adds (or overwrites) a suppression record for an address.
+	Suppress(ctx context.Context, record Record) error
 }
 
 // DynamoStore is a Store backed by the email-suppression DynamoDB table.
@@ -49,4 +53,24 @@ func (s *DynamoStore) IsSuppressed(ctx context.Context, email string) (bool, err
 		return false, fmt.Errorf("error checking suppression for %s: %w", email, err)
 	}
 	return len(out.Item) > 0, nil
+}
+
+// Suppress writes a suppression record (PutItem, so re-suppressing an address
+// refreshes its reason/timestamp rather than failing).
+func (s *DynamoStore) Suppress(ctx context.Context, record Record) error {
+	if record.Email == "" {
+		return fmt.Errorf("cannot suppress an empty email address")
+	}
+	item, err := attributevalue.MarshalMap(record)
+	if err != nil {
+		return fmt.Errorf("error marshalling suppression record for %s: %w", record.Email, err)
+	}
+	_, err = s.client.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: aws.String(s.table),
+		Item:      item,
+	})
+	if err != nil {
+		return fmt.Errorf("error writing suppression record for %s: %w", record.Email, err)
+	}
+	return nil
 }
