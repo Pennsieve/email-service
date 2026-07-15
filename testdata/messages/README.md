@@ -18,7 +18,26 @@ The `SAMPLE_<key>` values make rendering gaps obvious: a correctly rendered
 email shows e.g. `SAMPLE_datasetName` where the variable was; a blank or a
 literal `{{.datasetName}}` means the substitution failed.
 
-## Using a payload
+## Driver script (recommended)
+
+To send and verify many/all templates at once, use
+[`scripts/send-test-emails.sh`](../../scripts/send-test-emails.sh) instead of
+these static files. It builds each request on the fly from the template manifest
+with plausible sample values (overridable in
+[`testdata/sample-values.json`](../sample-values.json)), sends to the queue, and
+checks the journal:
+
+```bash
+ENV=dev ./scripts/send-test-emails.sh --dry-run     # build+validate all, no AWS
+ENV=dev ./scripts/send-test-emails.sh               # send all + verify SENT in journal
+ENV=dev ./scripts/send-test-emails.sh rehydration-complete dataset-proposal-submitted
+ENV=dev ./scripts/send-test-emails.sh --fresh       # unique dedupeId → forces resend
+```
+
+These static `<messageId>.json` files remain useful for a one-off paste into the
+Lambda Test console.
+
+## Using a single payload
 
 - **Lambda Test console:** paste the file contents as the test event.
 - **Real queue (end-to-end through the event source mapping):**

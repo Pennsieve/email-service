@@ -109,3 +109,17 @@ Paste a file into the Lambda **Test** console, or send its `body` to the queue.
 Because values are `SAMPLE_<key>`, the rendered email visibly shows whether every
 field was substituted (any literal `{{.` or blank means a rendering gap). See
 [`testdata/messages/README.md`](../testdata/messages/README.md).
+
+### Driver: send + verify all at once
+
+[`scripts/send-test-emails.sh`](../scripts/send-test-emails.sh) builds a request
+per messageId from the manifest (plausible sample values, overridable in
+[`testdata/sample-values.json`](../testdata/sample-values.json)), sends to the
+queue, and reports each result from the journal (SENT/FAILED/missing):
+
+```bash
+ENV=dev ./scripts/send-test-emails.sh --dry-run   # build + validate keys, no AWS
+ENV=dev ./scripts/send-test-emails.sh             # send all + verify
+ENV=dev ./scripts/send-test-emails.sh <messageId>...   # subset
+ENV=dev ./scripts/send-test-emails.sh --fresh     # unique dedupeId to force resend
+```
