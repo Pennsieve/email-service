@@ -3,7 +3,8 @@
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
 SERVICE_NAME  ?= "email-service"
-PACKAGE_NAME  ?= "${SERVICE_NAME}-${IMAGE_TAG}.zip"
+PACKAGE_NAME        ?= "${SERVICE_NAME}-${IMAGE_TAG}.zip"
+BOUNCE_PACKAGE_NAME ?= "${SERVICE_NAME}-bounce-${IMAGE_TAG}.zip"
 
 .DEFAULT: help
 
@@ -36,25 +37,34 @@ clean: docker-clean
 docker-clean:
 	docker-compose -f docker-compose.test.yml down
 
-# Build the queue lambda and create the deployment ZIP.
+# Build both lambdas (queue + bounce) into per-lambda ZIPs. Each is a separate
+# bootstrap binary zipped under its own name.
 package:
 	@echo ""
 	@echo "*****************************"
 	@echo "*   Building Queue lambda   *"
 	@echo "*****************************"
 	@echo ""
-	env GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o $(WORKING_DIR)/bin/bootstrap ./cmd/queue
-	cd $(WORKING_DIR)/bin && zip -r $(WORKING_DIR)/bin/$(PACKAGE_NAME) bootstrap
+	env GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o $(WORKING_DIR)/bin/queue/bootstrap ./cmd/queue
+	cd $(WORKING_DIR)/bin/queue && zip -r $(WORKING_DIR)/bin/$(PACKAGE_NAME) bootstrap
+	@echo ""
+	@echo "******************************"
+	@echo "*   Building Bounce lambda   *"
+	@echo "******************************"
+	@echo ""
+	env GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o $(WORKING_DIR)/bin/bounce/bootstrap ./cmd/bounce
+	cd $(WORKING_DIR)/bin/bounce && zip -r $(WORKING_DIR)/bin/$(BOUNCE_PACKAGE_NAME) bootstrap
 
-# Publish the queue lambda ZIP to the S3 location the Terraform lambda reads from.
+# Publish both lambda ZIPs to the S3 location the Terraform lambdas read from.
 publish: package
 	@echo ""
-	@echo "*******************************"
-	@echo "*   Publishing Queue lambda   *"
-	@echo "*******************************"
+	@echo "***********************************"
+	@echo "*   Publishing Queue + Bounce     *"
+	@echo "***********************************"
 	@echo ""
 	aws s3 cp $(WORKING_DIR)/bin/$(PACKAGE_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
-	rm -rf $(WORKING_DIR)/bin/$(PACKAGE_NAME) $(WORKING_DIR)/bin/bootstrap
+	aws s3 cp $(WORKING_DIR)/bin/$(BOUNCE_PACKAGE_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
+	rm -rf $(WORKING_DIR)/bin
 
 # Run go mod tidy
 tidy:
