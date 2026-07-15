@@ -11,6 +11,7 @@ import (
 	"github.com/pennsieve/email-service/internal/journal"
 	"github.com/pennsieve/email-service/internal/mailer"
 	"github.com/pennsieve/email-service/internal/store"
+	"github.com/pennsieve/email-service/internal/suppression"
 	"github.com/pennsieve/email-service/internal/templates"
 )
 
@@ -19,22 +20,30 @@ const defaultJournalTTLDays = 90
 
 // Env holds the configuration the handler reads from environment variables.
 type Env struct {
-	PennsieveDomain string
-	TemplateBucket  string
-	TemplatesTable  string
-	JournalTable    string
-	JournalTTLDays  int
+	PennsieveDomain  string
+	TemplateBucket   string
+	TemplatesTable   string
+	JournalTable     string
+	JournalTTLDays   int
+	SuppressionTable string
+	// SendEnabled is the service-level send switch. false = log-only for the
+	// whole service (every request is journaled but nothing is sent via SES).
+	SendEnabled bool
 }
 
 // LoadEnv reads the handler configuration from the environment. The variable
 // names mirror those set in the Terraform lambda definition.
 func LoadEnv() Env {
 	return Env{
-		PennsieveDomain: os.Getenv("PENNSIEVE_DOMAIN"),
-		TemplateBucket:  os.Getenv("S3_BUCKET"),
-		TemplatesTable:  os.Getenv("TEMPLATES_TABLE"),
-		JournalTable:    os.Getenv("JOURNAL_TABLE"),
-		JournalTTLDays:  ttlDays(os.Getenv("JOURNAL_TTL_DAYS")),
+		PennsieveDomain:  os.Getenv("PENNSIEVE_DOMAIN"),
+		TemplateBucket:   os.Getenv("S3_BUCKET"),
+		TemplatesTable:   os.Getenv("TEMPLATES_TABLE"),
+		JournalTable:     os.Getenv("JOURNAL_TABLE"),
+		JournalTTLDays:   ttlDays(os.Getenv("JOURNAL_TTL_DAYS")),
+		SuppressionTable: os.Getenv("SUPPRESSION_TABLE"),
+		// Default to enabled: only an explicit "false" turns sending off, so a
+		// missing/blank var never silently disables email in production.
+		SendEnabled: os.Getenv("SEND_ENABLED") != "false",
 	}
 }
 
@@ -61,6 +70,7 @@ type Config struct {
 	bodyStore     store.TemplateStore
 	mailer        mailer.Mailer
 	journal       journal.Journal
+	suppression   suppression.Store
 }
 
 func NewConfig(awsConfig aws.Config, env Env) *Config {
@@ -106,3 +116,13 @@ func (c *Config) Journal() journal.Journal {
 
 // SetJournal overrides the email-message-log journal writer (for tests).
 func (c *Config) SetJournal(j journal.Journal) { c.journal = j }
+
+func (c *Config) Suppression() suppression.Store {
+	if c.suppression == nil {
+		c.suppression = suppression.NewDynamoStore(dynamodb.NewFromConfig(c.awsConfig), c.Env.SuppressionTable)
+	}
+	return c.suppression
+}
+
+// SetSuppression overrides the address suppression store (for tests).
+func (c *Config) SetSuppression(s suppression.Store) { c.suppression = s }

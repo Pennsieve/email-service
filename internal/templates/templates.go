@@ -23,6 +23,10 @@ type Mapping struct {
 	MessageId    string `dynamodbav:"MessageId"`
 	TemplateFile string `dynamodbav:"TemplateFile"`
 	Subject      string `dynamodbav:"Subject"`
+	// SendDisabled, when true, suppresses actual delivery of this message type:
+	// requests are journaled (LoggedOnly) but not sent via SES. Absent (false)
+	// means sending is enabled, so existing rows need no change.
+	SendDisabled bool `dynamodbav:"SendDisabled,omitempty"`
 }
 
 // Store looks up the template mapping for a messageId.

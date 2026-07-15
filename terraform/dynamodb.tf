@@ -30,6 +30,38 @@ resource "aws_dynamodb_table" "email_message_templates_table" {
 
 }
 
+# Address-level send control: emails to an address with a row here are not
+# delivered (the request is still journaled, LoggedOnly). Keyed by the email
+# address; edited operationally (add/remove) without a deploy.
+resource "aws_dynamodb_table" "email_suppression_table" {
+  name         = "${var.environment_name}-email-suppression-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "Email"
+
+  attribute {
+    name = "Email"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = merge(
+    local.common_tags,
+    {
+      "Name"         = "${var.environment_name}-email-suppression-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+      "name"         = "${var.environment_name}-email-suppression-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+      "service_name" = var.service_name
+    },
+  )
+
+}
+
 resource "aws_dynamodb_table" "email_message_log_table" {
   name         = "${var.environment_name}-email-message-log-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
   billing_mode = "PAY_PER_REQUEST"
