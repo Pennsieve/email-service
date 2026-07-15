@@ -34,6 +34,11 @@ resource "aws_lambda_function" "queue_lambda" {
       # is a SendDisabled attribute on the email-message-templates items.
       SEND_ENABLED      = var.send_enabled
       SUPPRESSION_TABLE = aws_dynamodb_table.email_suppression_table.name
+      # Rate safeguard: caps emails handed to SES per minute (protects the SES
+      # account from a looping producer). Over-cap sends become log-only.
+      RATE_LIMIT_TABLE                  = aws_dynamodb_table.email_rate_counter_table.name
+      SEND_RATE_LIMIT_PER_MINUTE        = var.send_rate_limit_per_minute
+      PER_MESSAGE_RATE_LIMIT_PER_MINUTE = var.per_message_rate_limit_per_minute
     }
   }
 }

@@ -144,6 +144,8 @@ data "aws_iam_policy_document" "queue_lambda_iam_policy_document" {
       "${aws_dynamodb_table.email_message_log_table.arn}/*",
       aws_dynamodb_table.email_suppression_table.arn,
       "${aws_dynamodb_table.email_suppression_table.arn}/*",
+      aws_dynamodb_table.email_rate_counter_table.arn,
+      "${aws_dynamodb_table.email_rate_counter_table.arn}/*",
     ]
   }
 
