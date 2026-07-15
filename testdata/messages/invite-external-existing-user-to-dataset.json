@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-invite-external-existing-user-to-dataset",
+      "body": "{\"messageId\":\"invite-external-existing-user-to-dataset\",\"dedupeId\":\"verify-invite-external-existing-user-to-dataset\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"customMessage\":\"SAMPLE_customMessage\",\"datasetName\":\"SAMPLE_datasetName\",\"invitingEmailAddress\":\"SAMPLE_invitingEmailAddress\",\"invitingPerson\":\"SAMPLE_invitingPerson\",\"workspaceName\":\"SAMPLE_workspaceName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

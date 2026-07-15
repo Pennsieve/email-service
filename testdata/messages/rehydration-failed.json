@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-rehydration-failed",
+      "body": "{\"messageId\":\"rehydration-failed\",\"dedupeId\":\"verify-rehydration-failed\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"DatasetID\":\"SAMPLE_DatasetID\",\"DatasetVersionID\":\"SAMPLE_DatasetVersionID\",\"RequestID\":\"SAMPLE_RequestID\",\"SupportEmailAddress\":\"SAMPLE_SupportEmailAddress\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

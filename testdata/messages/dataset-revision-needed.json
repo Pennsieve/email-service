@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-dataset-revision-needed",
+      "body": "{\"messageId\":\"dataset-revision-needed\",\"dedupeId\":\"verify-dataset-revision-needed\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"datasetNodeId\":\"SAMPLE_datasetNodeId\",\"date\":\"SAMPLE_date\",\"host\":\"SAMPLE_host\",\"message\":\"SAMPLE_message\",\"organizationNodeId\":\"SAMPLE_organizationNodeId\",\"reviewerName\":\"SAMPLE_reviewerName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

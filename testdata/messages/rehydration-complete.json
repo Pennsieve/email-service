@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-rehydration-complete",
+      "body": "{\"messageId\":\"rehydration-complete\",\"dedupeId\":\"verify-rehydration-complete\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"AWSRegion\":\"SAMPLE_AWSRegion\",\"DatasetID\":\"SAMPLE_DatasetID\",\"DatasetVersionID\":\"SAMPLE_DatasetVersionID\",\"RehydrationLocation\":\"SAMPLE_RehydrationLocation\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}
