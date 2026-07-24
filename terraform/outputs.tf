@@ -23,3 +23,20 @@ output "email_service_queue_kms_key_arn" {
 output "email_templates_bucket_name" {
   value = aws_s3_bucket.email_templates_s3_bucket.bucket
 }
+
+# Connection info for the notifications database (rds.tf). No consumer reads
+# these yet (data layer only); they're exposed for whichever future lambda or
+# migration job needs to connect.
+output "notifications_db_endpoint" {
+  value = aws_db_instance.notifications_db.endpoint
+}
+
+output "notifications_db_name" {
+  value = aws_db_instance.notifications_db.db_name
+}
+
+# The secret holding {host, port, dbname, username, password} as JSON.
+output "notifications_db_secret_arn" {
+  value = aws_secretsmanager_secret.notifications_db_secret.arn
+}
+

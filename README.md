@@ -223,6 +223,51 @@ email"). Rows expire via a DynamoDB TTL after `JOURNAL_TTL_DAYS` (default 90).
 #### Search Indexes
 - **RecipientSentAtIndex**: `Recipient` (HASH) + `SentAtKey` (RANGE) — find all emails to a recipient, newest-first (query with `ScanIndexForward=false`). `MessageId` is projected (`ALL`) so it can be filtered client-side or with a `FilterExpression`.
 
+## Notifications schema (Postgres)
+
+A separate, Postgres-backed schema for topic-based notifications (distinct
+from the DynamoDB email templates/journal above): users subscribe to topics,
+a notification records an event on a topic, and per-user delivery/read status
+is tracked independently of any actual send. This is currently a **data layer
+only** — Terraform provisions the database ([`terraform/rds.tf`](terraform/rds.tf))
+and [`internal/notifications`](internal/notifications) provides the Go models
+and a `Store` repository over it, but nothing in the queue lambda calls it yet.
+
+### Tables
+
+| Table | Key(s) | Notes |
+|-------|--------|-------|
+| `users` | PK `user_id` | `email` is unique |
+| `topics` | PK `topic_id` | `name` is unique; an event category (e.g. "dataset-published") |
+| `subscriptions` | PK `subscription_id`, FK `user_id`/`topic_id` | a user's interest in a topic; unique per (user, topic); `context` is free-form JSONB |
+| `notifications` | PK `notification_id`, FK `topic_id`/`sender_id` | an event that occurred on a topic; `metadata` is free-form JSONB |
+| `messages` | PK `message_id`, FK `from_user`/`to_user`/`notification_id` | user-to-user communication attached to a notification |
+| `user_notifications` | PK `user_notification_id`, FK `user_id`/`notification_id` | per-user delivery/read status (`UNREAD`/`READ`); unique per (user, notification) |
+| `notification_preferences` | PK `user_id` (FK) | one row per user: `email_enabled`/`sms_enabled`/`push_enabled` |
+| `notification_audits` | PK `audit_id`, FK `notification_id` | append-only lifecycle audit trail; `details` is free-form JSONB |
+
+Table names are the pluralized snake_case form of each entity (`User` →
+`users`, `NotificationPreference` → `notification_preferences`, etc.) so no
+identifier collides with a reserved word (notably `user`).
+
+### Schema migrations
+
+DDL lives in [`internal/notifications/migrations`](internal/notifications/migrations)
+as [golang-migrate](https://github.com/golang-migrate/migrate)-compatible
+`NNNN_name.up.sql`/`.down.sql` pairs. Apply them with:
+
+```bash
+NOTIFICATIONS_DATABASE_URL="postgres://user:pass@host:5432/notifications?sslmode=require" make migrate-up
+```
+
+### Go data layer
+
+`internal/notifications` defines a `Store` interface (`PostgresStore` is the
+only implementation) with `Create`/`Get`/`List` methods per entity — e.g.
+`CreateSubscription`, `ListUserNotifications`, `UpsertNotificationPreference`.
+Construct it with `notifications.NewPostgresStore(pool)` given a
+`*pgxpool.Pool`.
+
 ## Troubleshooting
 
 To investigate whether an email was sent to a user, query the journal by

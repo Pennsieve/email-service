@@ -1,9 +1,14 @@
-.PHONY: help clean test test-ci package publish tidy generate
+.PHONY: help clean test test-ci package publish tidy generate migrate-up migrate-down
 
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
 SERVICE_NAME  ?= "email-service"
 PACKAGE_NAME  ?= "${SERVICE_NAME}-${IMAGE_TAG}.zip"
+
+# DSN for the notifications database, e.g.
+# postgres://user:pass@host:5432/notifications?sslmode=require
+NOTIFICATIONS_DATABASE_URL ?=
+NOTIFICATIONS_MIGRATIONS_PATH ?= internal/notifications/migrations
 
 .DEFAULT: help
 
@@ -16,6 +21,8 @@ help:
 	@echo "make package			- build and package the queue lambda"
 	@echo "make publish			- package and publish the queue lambda to S3"
 	@echo "make generate			- regenerate client builders from the template manifest"
+	@echo "make migrate-up			- apply notifications DB migrations (needs NOTIFICATIONS_DATABASE_URL)"
+	@echo "make migrate-down		- roll back one notifications DB migration (needs NOTIFICATIONS_DATABASE_URL)"
 
 # Run dockerized tests (can be used locally)
 test:
@@ -63,3 +70,12 @@ tidy:
 # Regenerate the client builders (Go + Scala) from contract/template-variables.json.
 generate:
 	go run internal/gen/main.go
+
+# Apply/roll back the notifications DB schema (internal/notifications/migrations)
+# using the golang-migrate CLI (https://github.com/golang-migrate/migrate).
+# Install it with: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+migrate-up:
+	migrate -path $(NOTIFICATIONS_MIGRATIONS_PATH) -database "$(NOTIFICATIONS_DATABASE_URL)" up
+
+migrate-down:
+	migrate -path $(NOTIFICATIONS_MIGRATIONS_PATH) -database "$(NOTIFICATIONS_DATABASE_URL)" down 1

@@ -28,6 +28,35 @@ variable "log_level" {
   default = "INFO"
 }
 
+############################################################
+# Notifications Postgres database (see rds.tf)
+############################################################
+
+variable "notifications_db_instance_class" {
+  default = "db.t4g.micro"
+}
+
+variable "notifications_db_engine_version" {
+  default = "16.4"
+}
+
+variable "notifications_db_allocated_storage" {
+  default = 20
+}
+
+# Ceiling for RDS storage autoscaling; set equal to notifications_db_allocated_storage to disable it.
+variable "notifications_db_max_allocated_storage" {
+  default = 100
+}
+
+variable "notifications_db_multi_az" {
+  default = false
+}
+
+variable "notifications_db_deletion_protection" {
+  default = false
+}
+
 locals {
   domain_name = data.terraform_remote_state.account.outputs.domain_name
   hosted_zone = data.terraform_remote_state.account.outputs.public_hosted_zone_id
