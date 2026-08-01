@@ -25,6 +25,22 @@ pennsieve-api does NOT yet use this flow — it renders `MessageTemplates` and
 calls SES directly. Its rows below are what it sends today and what it will
 enqueue once migrated.
 
+## Log-only: any email can be suppressed from delivery
+
+**Any** email below can be made *log-only* — journaled but not delivered via SES —
+by a send control. A suppressed send still lands an `email-message-log` row (with
+`LoggedOnly=true`); it is never silently dropped. So when verifying, an absent
+delivery with a `LoggedOnly` journal row means a control fired, not a failure.
+The controls:
+
+| Control | Mechanism | Scope |
+|---|---|---|
+| Service | `SEND_ENABLED=false` env var | whole service |
+| Template | `SendDisabled=true` on the `email-message-templates` item | one messageId |
+| Address | a row in the `email-suppression` table (PK `Email`) | one recipient |
+| Rate | per-minute cap exceeded (or counter check errors — fails closed) | whole service / per messageId |
+| Bounce/complaint | address auto-added to `email-suppression` when SES reports a permanent bounce or a complaint | one recipient |
+
 ## publishing-service — migrated (QueueNotifier)
 
 | messageId | context keys | recipients | trigger |
@@ -96,7 +112,10 @@ For each messageId confirm end to end:
    overrides it.
 5. **Envelope** — From `Pennsieve <support@{domain}>`, Reply-To `support@{domain}`.
 6. **Journal** — an `email-message-log` row lands `SENT` with an SES message id
-   (query with `scripts/email-log.sh`).
+   (query with `scripts/email-log.sh`). If the row has `LoggedOnly=true` and no
+   SES message id, a send control suppressed delivery (see
+   [Log-only](#log-only-any-email-can-be-suppressed-from-delivery)) — expected,
+   not a failure.
 
 ## Test matrix
 
