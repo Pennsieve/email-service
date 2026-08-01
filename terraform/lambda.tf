@@ -29,6 +29,11 @@ resource "aws_lambda_function" "queue_lambda" {
       # slog level read by internal/logging (DEBUG|INFO|WARN|ERROR); defaults to
       # INFO in code, so this just makes it overridable per environment.
       LOG_LEVEL = var.log_level
+      # Send controls: SEND_ENABLED=false makes the whole service log-only;
+      # SUPPRESSION_TABLE holds per-address suppressions. Template-level control
+      # is a SendDisabled attribute on the email-message-templates items.
+      SEND_ENABLED      = var.send_enabled
+      SUPPRESSION_TABLE = aws_dynamodb_table.email_suppression_table.name
     }
   }
 }

@@ -111,12 +111,26 @@ func handleRecord(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger
 	}
 	log.Info("rendered template", slog.String("subject", subject), slog.Int("htmlBytes", len(htmlBody)))
 
-	// 4. for each recipient: claim (idempotency guard) -> send -> mark.
+	// Send controls (message-level): the whole record is log-only if the service
+	// send switch is off, or this template has sending disabled. Per-recipient
+	// address suppression is checked in sendOne. In all cases the request is
+	// still journaled (see LoggedOnly on the entry).
+	messageLogOnly := ""
+	if !cfg.Env.SendEnabled {
+		messageLogOnly = "service send disabled"
+	} else if mapping.SendDisabled {
+		messageLogOnly = "template send disabled"
+	}
+	if messageLogOnly != "" {
+		log.Info("message is log-only", slog.String("reason", messageLogOnly))
+	}
+
+	// 4. for each recipient: claim (idempotency guard) -> send (or log-only) -> mark.
 	for _, recipient := range request.Recipients {
 		if recipient.Email == "" {
 			return fmt.Errorf("messageId %s has a recipient with no email address", request.MessageId)
 		}
-		if err := sendOne(ctx, cfg, log, request, subject, htmlBody, recipient.Email); err != nil {
+		if err := sendOne(ctx, cfg, log, request, subject, htmlBody, recipient.Email, messageLogOnly); err != nil {
 			return err
 		}
 	}
@@ -124,23 +138,45 @@ func handleRecord(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger
 	return nil
 }
 
-func sendOne(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, request client.EmailRequest, subject, htmlBody, recipientEmail string) error {
+// sendOne processes one (message, recipient). messageLogOnly is non-empty when
+// a message-level control (service/template) has already forced log-only; sendOne
+// additionally checks per-recipient address suppression. When any control
+// applies, the request is journaled with LoggedOnly=true and SES is skipped.
+func sendOne(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, request client.EmailRequest, subject, htmlBody, recipientEmail, messageLogOnly string) error {
 	dedupeKey := request.DedupeKey(recipientEmail)
 	sentAt := now()
-	log.Info("claiming send", slog.String("recipient", recipientEmail), slog.String("dedupeKey", dedupeKey))
+
+	// Address-level control: is this recipient on the suppression list?
+	logOnlyReason := messageLogOnly
+	if logOnlyReason == "" {
+		suppressed, err := cfg.Suppression().IsSuppressed(ctx, recipientEmail)
+		if err != nil {
+			return err
+		}
+		if suppressed {
+			logOnlyReason = "recipient suppressed"
+		}
+	}
+	logOnly := logOnlyReason != ""
+
+	log.Info("claiming send",
+		slog.String("recipient", recipientEmail),
+		slog.String("dedupeKey", dedupeKey),
+		slog.Bool("logOnly", logOnly))
 
 	// Claim is a conditional write: if a row for this dedupe key already exists,
 	// this (message, recipient) was already processed on an earlier delivery, so
 	// we skip to avoid a double-send. The QUEUED row is also the journal entry.
 	err := cfg.Journal().Claim(ctx, journal.Entry{
-		Id:        dedupeKey,
-		MessageId: request.MessageId,
-		Recipient: recipientEmail,
-		Status:    journal.StatusQueued,
-		Timestamp: sentAt.Unix(),
-		SentAtKey: journal.SentAtKey(sentAt),
-		Context:   request.Context,
-		ExpiresAt: sentAt.AddDate(0, 0, cfg.Env.JournalTTLDays).Unix(),
+		Id:         dedupeKey,
+		MessageId:  request.MessageId,
+		Recipient:  recipientEmail,
+		Status:     journal.StatusQueued,
+		Timestamp:  sentAt.Unix(),
+		SentAtKey:  journal.SentAtKey(sentAt),
+		Context:    request.Context,
+		ExpiresAt:  sentAt.AddDate(0, 0, cfg.Env.JournalTTLDays).Unix(),
+		LoggedOnly: logOnly,
 	})
 	if errors.Is(err, journal.ErrAlreadyClaimed) {
 		log.Info("skipping duplicate send", slog.String("recipient", recipientEmail))
@@ -148,6 +184,18 @@ func sendOne(ctx context.Context, cfg *emailconfig.Config, log *slog.Logger, req
 	}
 	if err != nil {
 		return err
+	}
+
+	// Log-only: the request is journaled (claimed above, marked below) but not
+	// delivered. Every request is recorded regardless of the send controls.
+	if logOnly {
+		if err := cfg.Journal().MarkLoggedOnly(ctx, dedupeKey, sentAt.Format(time.RFC3339)); err != nil {
+			return err
+		}
+		log.Info("logged only (not sent)",
+			slog.String("recipient", recipientEmail),
+			slog.String("reason", logOnlyReason))
+		return nil
 	}
 
 	sesMessageId, sendErr := cfg.Mailer().Send(ctx, mailer.Email{
