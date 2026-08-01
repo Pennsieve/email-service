@@ -1,55 +1,44 @@
-# Bounce/complaint notification pipeline.
+# Bounce/complaint subscriptions.
 #
 # SES publishes bounce and complaint notifications for the Pennsieve domain
-# identity to this SNS topic; the bounce lambda (lambda.tf) subscribes and adds
-# the affected addresses to the suppression table. Continuing to send to
-# hard-bouncing or complaining addresses is what drives the bounce/complaint
-# rates AWS suspends SES accounts over, so this closes the loop automatically.
+# identity to SNS topics. Those topics and the identity->topic routing are
+# managed centrally (SES identity administration is house-controlled — the
+# service deploy role is intentionally not granted ses:SetIdentityNotificationTopic),
+# so this service does NOT create the topics or touch the identity routing.
+# Instead, the bounce lambda (lambda.tf) subscribes to the EXISTING platform
+# Bounce and Complaint topics and adds the affected addresses to the suppression
+# table.
+#
+# The topic ARNs are passed in via bounce_topic_arn / complaint_topic_arn. Until
+# they are supplied, no subscription is created (the lambda deploys but receives
+# nothing) — this keeps the deploy green while the topic ARNs are confirmed with
+# the platform owner.
 
-resource "aws_sns_topic" "email_bounce_topic" {
-  name = "${var.environment_name}-${var.service_name}-bounce-topic-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
-}
-
-# Allow SES to publish to the topic.
-resource "aws_sns_topic_policy" "email_bounce_topic_policy" {
-  arn    = aws_sns_topic.email_bounce_topic.arn
-  policy = data.aws_iam_policy_document.email_bounce_topic_policy_document.json
-}
-
-data "aws_iam_policy_document" "email_bounce_topic_policy_document" {
-  statement {
-    sid       = "AllowSESPublish"
-    effect    = "Allow"
-    actions   = ["sns:Publish"]
-    resources = [aws_sns_topic.email_bounce_topic.arn]
-
-    principals {
-      type        = "Service"
-      identifiers = ["ses.amazonaws.com"]
-    }
-
-    # Scope to notifications originating from this account's SES.
-    condition {
-      test     = "StringEquals"
-      variable = "AWS:SourceAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
+locals {
+  # Non-empty existing SES notification topic ARNs to subscribe the bounce lambda
+  # to, keyed for stable for_each addressing.
+  bounce_topic_arns = {
+    for k, v in {
+      bounce    = var.bounce_topic_arn
+      complaint = var.complaint_topic_arn
+    } : k => v if v != ""
   }
 }
 
-# Route bounce notifications for the domain identity to the topic. The domain
-# identity itself is verified elsewhere in the platform; here we only attach the
-# notification routing, which is idempotent and identity-scoped.
-resource "aws_ses_identity_notification_topic" "bounce" {
-  topic_arn                = aws_sns_topic.email_bounce_topic.arn
-  notification_type        = "Bounce"
-  identity                 = local.domain_name
-  include_original_headers = false
+# Subscribe the bounce lambda to each existing SES notification topic.
+resource "aws_sns_topic_subscription" "bounce_lambda_subscription" {
+  for_each  = local.bounce_topic_arns
+  topic_arn = each.value
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.bounce_lambda.arn
 }
 
-resource "aws_ses_identity_notification_topic" "complaint" {
-  topic_arn                = aws_sns_topic.email_bounce_topic.arn
-  notification_type        = "Complaint"
-  identity                 = local.domain_name
-  include_original_headers = false
+# Let each subscribed topic invoke the bounce lambda.
+resource "aws_lambda_permission" "bounce_lambda_sns" {
+  for_each      = local.bounce_topic_arns
+  statement_id  = "AllowSNSInvoke-${each.key}"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.bounce_lambda.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = each.value
 }
