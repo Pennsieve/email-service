@@ -35,6 +35,18 @@ variable "send_enabled" {
   default = "true"
 }
 
+# Account-wide cap on emails handed to SES per minute (protects SES reputation
+# from a looping producer). Over-cap sends are made log-only. 0 disables.
+variable "send_rate_limit_per_minute" {
+  default = 300
+}
+
+# Optional per-messageId cap per minute (catches a single looping message type).
+# 0 disables the per-message check.
+variable "per_message_rate_limit_per_minute" {
+  default = 120
+}
+
 locals {
   domain_name = data.terraform_remote_state.account.outputs.domain_name
   hosted_zone = data.terraform_remote_state.account.outputs.public_hosted_zone_id

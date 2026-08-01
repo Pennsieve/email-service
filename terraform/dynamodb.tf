@@ -62,6 +62,39 @@ resource "aws_dynamodb_table" "email_suppression_table" {
 
 }
 
+# Rate safeguard counters: one row per (counter key, time window). The handler
+# does an atomic ADD per send and compares to the cap. Rows are short-lived
+# (TTL on ExpiresAt) — only current windows matter.
+resource "aws_dynamodb_table" "email_rate_counter_table" {
+  name         = "${var.environment_name}-email-rate-counter-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "Bucket"
+
+  attribute {
+    name = "Bucket"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ExpiresAt"
+    enabled        = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = merge(
+    local.common_tags,
+    {
+      "Name"         = "${var.environment_name}-email-rate-counter-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+      "name"         = "${var.environment_name}-email-rate-counter-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+      "service_name" = var.service_name
+    },
+  )
+
+}
+
 resource "aws_dynamodb_table" "email_message_log_table" {
   name         = "${var.environment_name}-email-message-log-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
   billing_mode = "PAY_PER_REQUEST"

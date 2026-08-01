@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/pennsieve/email-service/internal/journal"
 	"github.com/pennsieve/email-service/internal/mailer"
+	"github.com/pennsieve/email-service/internal/ratelimit"
 	"github.com/pennsieve/email-service/internal/store"
 	"github.com/pennsieve/email-service/internal/suppression"
 	"github.com/pennsieve/email-service/internal/templates"
@@ -29,6 +30,13 @@ type Env struct {
 	// SendEnabled is the service-level send switch. false = log-only for the
 	// whole service (every request is journaled but nothing is sent via SES).
 	SendEnabled bool
+	// Rate safeguard: RateLimitTable holds the window counters;
+	// SendRateLimitPerMinute is the account-wide cap on emails handed to SES per
+	// minute (<=0 disables). PerMessageRateLimitPerMinute optionally caps a
+	// single messageId (<=0 disables the per-message check).
+	RateLimitTable               string
+	SendRateLimitPerMinute       int
+	PerMessageRateLimitPerMinute int
 }
 
 // LoadEnv reads the handler configuration from the environment. The variable
@@ -43,8 +51,24 @@ func LoadEnv() Env {
 		SuppressionTable: os.Getenv("SUPPRESSION_TABLE"),
 		// Default to enabled: only an explicit "false" turns sending off, so a
 		// missing/blank var never silently disables email in production.
-		SendEnabled: os.Getenv("SEND_ENABLED") != "false",
+		SendEnabled:                  os.Getenv("SEND_ENABLED") != "false",
+		RateLimitTable:               os.Getenv("RATE_LIMIT_TABLE"),
+		SendRateLimitPerMinute:       intEnv(os.Getenv("SEND_RATE_LIMIT_PER_MINUTE")),
+		PerMessageRateLimitPerMinute: intEnv(os.Getenv("PER_MESSAGE_RATE_LIMIT_PER_MINUTE")),
 	}
+}
+
+// intEnv parses a non-negative int env var; blank/invalid → 0 (disables the
+// corresponding rate check).
+func intEnv(v string) int {
+	if v == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
 }
 
 func ttlDays(v string) int {
@@ -71,6 +95,7 @@ type Config struct {
 	mailer        mailer.Mailer
 	journal       journal.Journal
 	suppression   suppression.Store
+	limiter       ratelimit.Limiter
 }
 
 func NewConfig(awsConfig aws.Config, env Env) *Config {
@@ -126,3 +151,13 @@ func (c *Config) Suppression() suppression.Store {
 
 // SetSuppression overrides the address suppression store (for tests).
 func (c *Config) SetSuppression(s suppression.Store) { c.suppression = s }
+
+func (c *Config) Limiter() ratelimit.Limiter {
+	if c.limiter == nil {
+		c.limiter = ratelimit.NewDynamoLimiter(dynamodb.NewFromConfig(c.awsConfig), c.Env.RateLimitTable)
+	}
+	return c.limiter
+}
+
+// SetLimiter overrides the rate limiter (for tests).
+func (c *Config) SetLimiter(l ratelimit.Limiter) { c.limiter = l }

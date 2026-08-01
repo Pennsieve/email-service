@@ -97,6 +97,22 @@ func (m *mockSuppression) IsSuppressed(_ context.Context, email string) (bool, e
 	return m.suppressed[email], nil
 }
 
+// mockLimiter allows every call by default; set allow=false to trip the rate
+// guard, or err to simulate a counter failure (fail-closed test).
+type mockLimiter struct {
+	allow bool
+	err   error
+	calls int
+}
+
+func (m *mockLimiter) Allow(_ context.Context, _ string, _ int, _ time.Duration) (bool, error) {
+	m.calls++
+	if m.err != nil {
+		return false, m.err
+	}
+	return m.allow, nil
+}
+
 // statefulJournal models the real DynamoDB Claim condition: a claim succeeds
 // when there is no row OR the existing row is FAILED; a QUEUED/SENT row blocks
 // it with ErrAlreadyClaimed. Used to exercise the redelivery/retry contract.
@@ -144,6 +160,7 @@ func newTestConfig(ts templates.Store, bs *mockBodyStore, ml mailer.Mailer, jr j
 	cfg.SetMailer(ml)
 	cfg.SetJournal(jr)
 	cfg.SetSuppression(&mockSuppression{suppressed: map[string]bool{}})
+	cfg.SetLimiter(&mockLimiter{allow: true})
 	return cfg
 }
 
@@ -262,6 +279,62 @@ func TestSuppressedRecipientIsLogOnlyPerRecipient(t *testing.T) {
 	require.Len(t, jr.sent, 1)
 	require.Len(t, jr.loggedOnly, 1)
 	require.Len(t, jr.claimed, 2)
+}
+
+// --- rate guard -----------------------------------------------------------
+
+// Over the rate cap -> log-only, SES not called.
+func TestRateLimitExceededIsLogOnly(t *testing.T) {
+	ts := &mockTemplateStore{mapping: &templates.Mapping{TemplateFile: "f.html", Subject: "S"}}
+	bs := &mockBodyStore{body: []byte("body")}
+	ml := &mockMailer{}
+	jr := &mockJournal{}
+	cfg := newTestConfig(ts, bs, ml, jr)
+	cfg.Env.SendRateLimitPerMinute = 100 // enable the check
+	cfg.SetLimiter(&mockLimiter{allow: false})
+
+	resp := ProcessEvent(context.Background(), cfg, sqsEvent(oneRecipientBody))
+
+	assert.Empty(t, resp.BatchItemFailures)
+	assert.Empty(t, ml.sent, "over rate cap must not reach SES")
+	require.Len(t, jr.claimed, 1)
+	assert.True(t, jr.claimed[0].LoggedOnly)
+	require.Len(t, jr.loggedOnly, 1)
+}
+
+// Rate-counter error -> fail closed to log-only (do not send when we can't
+// confirm we're under the cap).
+func TestRateLimitCounterErrorFailsClosed(t *testing.T) {
+	ts := &mockTemplateStore{mapping: &templates.Mapping{TemplateFile: "f.html", Subject: "S"}}
+	bs := &mockBodyStore{body: []byte("body")}
+	ml := &mockMailer{}
+	jr := &mockJournal{}
+	cfg := newTestConfig(ts, bs, ml, jr)
+	cfg.Env.SendRateLimitPerMinute = 100
+	cfg.SetLimiter(&mockLimiter{err: errors.New("dynamo down")})
+
+	resp := ProcessEvent(context.Background(), cfg, sqsEvent(oneRecipientBody))
+
+	assert.Empty(t, resp.BatchItemFailures, "fail-closed is not an error — the request is logged, not retried")
+	assert.Empty(t, ml.sent, "counter error must not send")
+	require.Len(t, jr.loggedOnly, 1)
+}
+
+// Under the cap -> normal send, limiter was consulted.
+func TestRateLimitUnderCapSends(t *testing.T) {
+	ts := &mockTemplateStore{mapping: &templates.Mapping{TemplateFile: "f.html", Subject: "S"}}
+	bs := &mockBodyStore{body: []byte("body")}
+	ml := &mockMailer{}
+	jr := &mockJournal{}
+	cfg := newTestConfig(ts, bs, ml, jr)
+	cfg.Env.SendRateLimitPerMinute = 100
+	lim := &mockLimiter{allow: true}
+	cfg.SetLimiter(lim)
+
+	ProcessEvent(context.Background(), cfg, sqsEvent(oneRecipientBody))
+
+	require.Len(t, ml.sent, 1, "under cap should send")
+	assert.Positive(t, lim.calls, "limiter was consulted")
 }
 
 func TestDuplicateIsSkipped(t *testing.T) {
