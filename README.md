@@ -171,8 +171,15 @@ regenerating the client builders from the updated `template-variables.json`.
 
 ### Entry point
 
-SQS queue: `{env}-email-service-queue-use1` (consumed by the queue lambda via an
-event source mapping with `ReportBatchItemFailures`).
+The service is two lambdas:
+
+- **queue lambda** (`cmd/queue`) — consumes the SQS send queue
+  `{env}-email-service-queue-use1` via an event source mapping with
+  `ReportBatchItemFailures`; renders and delivers each message.
+- **bounce lambda** (`cmd/bounce`) — subscribed to the
+  `{env}-email-service-bounce-topic-use1` SNS topic that SES publishes
+  bounce/complaint notifications to; auto-suppresses the affected addresses (see
+  [Bounce & complaint auto-suppression](#bounce--complaint-auto-suppression)).
 
 ### Environment variables
 
@@ -223,6 +230,26 @@ turn into a page.
 
 Caps are env vars (`SEND_RATE_LIMIT_PER_MINUTE`, `PER_MESSAGE_RATE_LIMIT_PER_MINUTE`;
 `0` disables), tunable per environment without a code deploy.
+
+### Bounce & complaint auto-suppression
+
+The address suppression list above is also fed automatically. SES publishes
+**bounce** and **complaint** notifications for the Pennsieve domain identity to an
+SNS topic, and a second lambda (`cmd/bounce`, subscribed to that topic) adds the
+affected addresses to the `email-suppression` table so the service stops sending
+to them:
+
+- **Permanent bounces** → suppressed with `Reason=bounce`. These are hard failures
+  (address doesn't exist); repeatedly sending to them is what wrecks the account's
+  bounce rate.
+- **Complaints** (recipient hit "mark as spam") → suppressed with `Reason=complaint`.
+  Complaint rate is the other metric AWS suspends over.
+- **Transient bounces** (mailbox full, greylisting) are **ignored** — suppressing a
+  temporarily-unavailable address would permanently blacklist it.
+
+The handler is idempotent (re-suppressing refreshes the row) and skips unparseable
+notifications rather than failing the SNS delivery. This closes the loop: bad
+addresses are removed from circulation without operator intervention.
 
 ### Table: `email-message-templates`
 Maps `messageId` to a template file in S3 and the default *subject* line. The

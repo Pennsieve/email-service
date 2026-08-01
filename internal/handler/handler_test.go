@@ -14,6 +14,7 @@ import (
 	emailconfig "github.com/pennsieve/email-service/internal/config"
 	"github.com/pennsieve/email-service/internal/journal"
 	"github.com/pennsieve/email-service/internal/mailer"
+	"github.com/pennsieve/email-service/internal/suppression"
 	"github.com/pennsieve/email-service/internal/templates"
 )
 
@@ -95,6 +96,14 @@ type mockSuppression struct {
 
 func (m *mockSuppression) IsSuppressed(_ context.Context, email string) (bool, error) {
 	return m.suppressed[email], nil
+}
+
+func (m *mockSuppression) Suppress(_ context.Context, r suppression.Record) error {
+	if m.suppressed == nil {
+		m.suppressed = map[string]bool{}
+	}
+	m.suppressed[r.Email] = true
+	return nil
 }
 
 // mockLimiter allows every call by default; set allow=false to trip the rate
