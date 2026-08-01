@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-added-to-team",
+      "body": "{\"messageId\":\"added-to-team\",\"dedupeId\":\"verify-added-to-team\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"administrator\":\"SAMPLE_administrator\",\"host\":\"SAMPLE_host\",\"organizationNodeId\":\"SAMPLE_organizationNodeId\",\"teamName\":\"SAMPLE_teamName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

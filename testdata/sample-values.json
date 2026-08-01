@@ -1,0 +1,30 @@
+{
+  "_comment": "Optional overrides for send-test-emails.sh sample values. The driver derives a plausible value for each template variable from its NAME (see the script's semantic rules); anything set here overrides that. Use `_global` for values shared across templates, and a messageId block for template-specific values. Only keys a template actually uses are applied.",
+
+  "_global": {
+    "organizationId": 367,
+    "host": "app.pennsieve.net",
+    "discoverHost": "discover.pennsieve.net",
+    "AppURL": "app.pennsieve.net",
+    "date": "2026-07-15"
+  },
+
+  "dataset-publication-accepted": {
+    "datasetName": "Cortical Recordings 2026",
+    "reviewerName": "Dr. Ada Reviewer"
+  },
+
+  "dataset-proposal-submitted": {
+    "ProposalTitle": "Proposal: Cortical Recordings 2026",
+    "WorkspaceName": "SPARC",
+    "AuthorName": "Grace Hopper",
+    "AuthorEmail": "grace@example.com"
+  },
+
+  "rehydration-complete": {
+    "DatasetID": "12345",
+    "DatasetVersionID": "3",
+    "RehydrationLocation": "s3://pennsieve-rehydration/12345/3/",
+    "AWSRegion": "us-east-1"
+  }
+}

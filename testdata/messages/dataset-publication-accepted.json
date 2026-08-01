@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-dataset-publication-accepted",
+      "body": "{\"messageId\":\"dataset-publication-accepted\",\"dedupeId\":\"verify-dataset-publication-accepted\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"date\":\"SAMPLE_date\",\"reviewerName\":\"SAMPLE_reviewerName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

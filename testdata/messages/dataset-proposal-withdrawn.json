@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-dataset-proposal-withdrawn",
+      "body": "{\"messageId\":\"dataset-proposal-withdrawn\",\"dedupeId\":\"verify-dataset-proposal-withdrawn\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"AppURL\":\"SAMPLE_AppURL\",\"AuthorEmail\":\"SAMPLE_AuthorEmail\",\"AuthorName\":\"SAMPLE_AuthorName\",\"ProposalTitle\":\"SAMPLE_ProposalTitle\",\"WorkspaceName\":\"SAMPLE_WorkspaceName\",\"WorkspaceNodeId\":\"SAMPLE_WorkspaceNodeId\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

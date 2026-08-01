@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-embargo-access-requested",
+      "body": "{\"messageId\":\"embargo-access-requested\",\"dedupeId\":\"verify-embargo-access-requested\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"datasetNodeId\":\"SAMPLE_datasetNodeId\",\"date\":\"SAMPLE_date\",\"host\":\"SAMPLE_host\",\"organizationNodeId\":\"SAMPLE_organizationNodeId\",\"userName\":\"SAMPLE_userName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

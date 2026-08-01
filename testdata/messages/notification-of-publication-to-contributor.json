@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-notification-of-publication-to-contributor",
+      "body": "{\"messageId\":\"notification-of-publication-to-contributor\",\"dedupeId\":\"verify-notification-of-publication-to-contributor\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"discoverDatasetId\":\"SAMPLE_discoverDatasetId\",\"discoverHost\":\"SAMPLE_discoverHost\",\"ownerName\":\"SAMPLE_ownerName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

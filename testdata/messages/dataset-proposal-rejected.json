@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-dataset-proposal-rejected",
+      "body": "{\"messageId\":\"dataset-proposal-rejected\",\"dedupeId\":\"verify-dataset-proposal-rejected\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"AppURL\":\"SAMPLE_AppURL\",\"ProposalTitle\":\"SAMPLE_ProposalTitle\",\"WelcomeWorkspaceNodeId\":\"SAMPLE_WelcomeWorkspaceNodeId\",\"WorkspaceName\":\"SAMPLE_WorkspaceName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

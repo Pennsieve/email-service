@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-error-publishing",
+      "body": "{\"messageId\":\"error-publishing\",\"dedupeId\":\"verify-error-publishing\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

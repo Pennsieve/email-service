@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-added-to-organization",
+      "body": "{\"messageId\":\"added-to-organization\",\"dedupeId\":\"verify-added-to-organization\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"administrator\":\"SAMPLE_administrator\",\"customMessage\":\"SAMPLE_customMessage\",\"host\":\"SAMPLE_host\",\"organizationName\":\"SAMPLE_organizationName\",\"organizationNodeId\":\"SAMPLE_organizationNodeId\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

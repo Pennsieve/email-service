@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-embargoed-dataset-released",
+      "body": "{\"messageId\":\"embargoed-dataset-released\",\"dedupeId\":\"verify-embargoed-dataset-released\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"discoverDatasetId\":\"SAMPLE_discoverDatasetId\",\"discoverHost\":\"SAMPLE_discoverHost\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

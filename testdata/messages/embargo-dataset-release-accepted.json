@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-embargo-dataset-release-accepted",
+      "body": "{\"messageId\":\"embargo-dataset-release-accepted\",\"dedupeId\":\"verify-embargo-dataset-release-accepted\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"datasetName\":\"SAMPLE_datasetName\",\"date\":\"SAMPLE_date\",\"reviewerName\":\"SAMPLE_reviewerName\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

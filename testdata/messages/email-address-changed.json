@@ -1,0 +1,10 @@
+{
+  "Records": [
+    {
+      "messageId": "verify-email-address-changed",
+      "body": "{\"messageId\":\"email-address-changed\",\"dedupeId\":\"verify-email-address-changed\",\"recipients\":[{\"name\":\"Verify Recipient\",\"email\":\"verify@example.com\"}],\"context\":{\"currentEmailAddress\":\"SAMPLE_currentEmailAddress\",\"previousEmailAddress\":\"SAMPLE_previousEmailAddress\",\"transactionNumber\":\"SAMPLE_transactionNumber\",\"organizationId\":367}}",
+      "eventSource": "aws:sqs",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}
