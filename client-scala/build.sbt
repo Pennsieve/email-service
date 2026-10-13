@@ -35,6 +35,11 @@ ThisBuild / resolvers += "pennsieve" at codeArtifactRepo
 ThisBuild / publishTo := Some("pennsieve" at codeArtifactRepo)
 ThisBuild / publishMavenStyle := true
 
+// Publish the way Maven does (sbt-aether-deploy). sbt's own publisher writes
+// neither maven-metadata.xml nor timestamped snapshots, so in CodeArtifact its
+// releases stay Unfinished and its snapshots are rejected.
+overridePublishSettings
+
 lazy val circeVersion = "0.14.1"
 lazy val awsV2Version  = "2.20.26"
 
