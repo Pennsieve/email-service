@@ -63,16 +63,18 @@ published to the old Nexus, before the move.)
 
 ## Versioning & publishing
 
-Releases are **intentional and tag-driven**. CI (the email-service `Jenkinsfile`)
-publishes to CodeArtifact as follows:
+Semver releases are **intentional and tag-driven**; every `main` build also
+publishes a build version. CI (the email-service `Jenkinsfile`) publishes to
+CodeArtifact as follows:
 
 | Trigger | Publishes | Where |
 |---|---|---|
 | **git tag `vX.Y.Z`** (or a GitHub Release from it) | release `X.Y.Z` | `maven` |
-| merge to `main`, other branches | nothing (test only) | — |
+| **merge to `main`** | `<build>-<commit>`, e.g. `31-3d9f63b` (same scheme as the other Pennsieve clients) | `maven` |
+| other branches | nothing (test only) | — |
 
-Consumers pin a released semver (e.g. `com.pennsieve %% email-client-scala % "1.2.0"`).
-No snapshots are published.
+Consumers pin an exact version: a semver release (e.g. `com.pennsieve %% email-client-scala % "1.2.0"`)
+or a main build. No snapshots are published, and a published version can't be replaced.
 
 **To cut a release:** tag the commit `vX.Y.Z` and push the tag (or publish a
 GitHub Release); CI publishes `X.Y.Z`. Use `v`-prefixed tags to match the house
