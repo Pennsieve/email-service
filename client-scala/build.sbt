@@ -7,9 +7,9 @@
 ThisBuild / organization := "com.pennsieve"
 ThisBuild / scalaVersion := "2.13.16"
 
-// CI injects the version (sbt -Dversion=X.Y.Z publish) on a vX.Y.Z tag build,
-// the only builds that publish (see the Jenkinsfile). The fallback only applies
-// to local builds.
+// CI injects the version (sbt -Dversion=... publish): <build>-<commit> on main,
+// X.Y.Z on a vX.Y.Z tag (see the Jenkinsfile). The fallback only applies to
+// local builds.
 ThisBuild / version := sys.props.get("version").getOrElse("0.0.0-SNAPSHOT")
 
 // Pennsieve packages live in AWS CodeArtifact (pennsieve-cc), `maven` repository. Access is IAM: the build exchanges the active

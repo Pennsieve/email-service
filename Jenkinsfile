@@ -4,12 +4,15 @@
 // via service-deploy) and the Scala producer client in client-scala/ (test +
 // publish to CodeArtifact).
 //
-// Scala client versioning (com.pennsieve:email-client-scala) — releases are
-// intentional, driven by git tags:
-//   * Tag build (vX.Y.Z)        -> publish release X.Y.Z to AWS CodeArtifact.
-//   * main and other branches   -> test only, no publish.
+// Scala client versioning (com.pennsieve:email-client-scala), published to AWS
+// CodeArtifact:
+//   * main-branch build         -> publish <build>-<commit> (e.g. 31-3d9f63b),
+//                                   the same scheme as the other Pennsieve clients.
+//   * Tag build (vX.Y.Z)        -> publish release X.Y.Z.
+//   * other branches            -> test only, no publish.
 //
-// No snapshots: consumers pin releases, and nothing has ever resolved one.
+// No snapshots: CodeArtifact versions are immutable, so every publish is a
+// unique release version, and consumers pin one.
 // No Jenkins credential is involved: sbt gets a short-lived CodeArtifact token
 // with the agent's instance role (see client-scala/build.sbt).
 
@@ -34,7 +37,7 @@ ansiColor('xterm') {
   def commitHash  = sh(returnStdout: true, script: 'git rev-parse HEAD | cut -c-7').trim()
   def imageTag    = "${env.BUILD_NUMBER}-${commitHash}"
 
-  def scalaVersion = scalaReleaseVersion(env.TAG_NAME)
+  def scalaVersion = scalaReleaseVersion(env.TAG_NAME) ?: (isMain ? imageTag : null)
 
   try {
     stage("Run Tests") {
@@ -52,7 +55,7 @@ ansiColor('xterm') {
       }
     }
 
-    // Publish the Scala client: only a vX.Y.Z tag publishes, as release X.Y.Z.
+    // Publish the Scala client: main as <build>-<commit>, a vX.Y.Z tag as X.Y.Z.
     if (scalaVersion) {
       stage("Publish Scala client") {
         dir("client-scala") {
