@@ -7,36 +7,33 @@
 ThisBuild / organization := "com.pennsieve"
 ThisBuild / scalaVersion := "2.13.16"
 
-// Coursier's HTTP handling against Nexus causes redirect loops on Jenkins
-// ("Server redirected too many times"); the classic Ivy resolver does not.
-// Mirrors pennsieve-api (set in both build.sbt and project/plugins.sbt).
-ThisBuild / useCoursier := false
-
 // CI always injects the version (sbt -Dversion=X.Y.Z publish): a vX.Y.Z tag
 // publishes the release X.Y.Z; a main build publishes the next-minor -SNAPSHOT
 // (see the Jenkinsfile). The fallback only applies to a bare local `sbt publish`.
 ThisBuild / version := sys.props.get("version").getOrElse("0.0.0-SNAPSHOT")
 
-// Publish to the Pennsieve Nexus, same as pennsieve-api. Credentials come from
-// the environment (the Jenkins executor provides them) — no creds in the repo.
-ThisBuild / credentials += Credentials(
-  "Sonatype Nexus Repository Manager",
-  "nexus.pennsieve.cc",
-  sys.env.getOrElse("PENNSIEVE_NEXUS_USER", ""),
-  sys.env.getOrElse("PENNSIEVE_NEXUS_PW", "")
-)
-
-ThisBuild / publishTo := {
-  val nexus = "https://nexus.pennsieve.cc/repository"
-  if (isSnapshot.value) Some("Nexus Realm" at s"$nexus/maven-snapshots")
-  else Some("Nexus Realm" at s"$nexus/maven-releases")
+// Pennsieve packages live in AWS CodeArtifact (pennsieve-cc), releases and
+// snapshots in one repository. Access is IAM: the build exchanges the active
+// AWS credentials -- the Jenkins agent's instance role, or `assume-role
+// non-prod admin` locally -- for a short-lived token. Nothing is stored.
+// CODEARTIFACT_AUTH_TOKEN, if set, is used instead (e.g. inside Docker builds).
+lazy val codeArtifactHost = "pennsieve-932986170183.d.codeartifact.us-east-1.amazonaws.com"
+lazy val codeArtifactRepo = s"https://$codeArtifactHost/maven/maven/"
+lazy val codeArtifactToken: String = sys.env.get("CODEARTIFACT_AUTH_TOKEN").getOrElse {
+  import scala.sys.process._
+  val cmd = Seq("aws", "codeartifact", "get-authorization-token", "--domain", "pennsieve",
+    "--domain-owner", "932986170183", "--region", "us-east-1",
+    "--query", "authorizationToken", "--output", "text")
+  scala.util.Try(cmd.!!(ProcessLogger(_ => ())).trim).getOrElse {
+    println("[warn] No CodeArtifact token: AWS credentials missing or not allowed. Run assume-role non-prod admin.")
+    ""
+  }
 }
-ThisBuild / publishMavenStyle := true
 
-ThisBuild / resolvers ++= Seq(
-  "Pennsieve Releases" at "https://nexus.pennsieve.cc/repository/maven-releases",
-  "Pennsieve Snapshots" at "https://nexus.pennsieve.cc/repository/maven-snapshots"
-)
+ThisBuild / credentials += Credentials("pennsieve/maven", codeArtifactHost, "aws", codeArtifactToken)
+ThisBuild / resolvers += "pennsieve" at codeArtifactRepo
+ThisBuild / publishTo := Some("pennsieve" at codeArtifactRepo)
+ThisBuild / publishMavenStyle := true
 
 lazy val circeVersion = "0.14.1"
 lazy val awsV2Version  = "2.20.26"
