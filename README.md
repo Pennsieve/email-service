@@ -114,7 +114,7 @@ val request = Messages
 client.send(request) // returns Try[String]
 ```
 
-Published to the Pennsieve Nexus as `com.pennsieve %% email-client-scala`
+Published to Pennsieve's CodeArtifact as `com.pennsieve %% email-client-scala`
 (release versions are cut from `vX.Y.Z` git tags). See
 [`client-scala/README.md`](client-scala/README.md).
 

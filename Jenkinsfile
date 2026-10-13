@@ -2,25 +2,17 @@
 
 // CI for the email-service: the Go queue lambda (test, publish artifact, deploy
 // via service-deploy) and the Scala producer client in client-scala/ (test +
-// publish to Nexus).
+// publish to CodeArtifact).
 //
 // Scala client versioning (com.pennsieve:email-client-scala) — releases are
 // intentional, driven by git tags:
-//   * Tag build (vX.Y.Z)        -> publish release X.Y.Z to maven-releases.
-//   * main-branch build         -> publish next-minor-SNAPSHOT to maven-snapshots
+//   * Tag build (vX.Y.Z)        -> publish release X.Y.Z.
+//   * main-branch build         -> publish next-minor-SNAPSHOT
 //                                   (e.g. latest tag v1.2.0 -> 1.3.0-SNAPSHOT).
 //   * other branches            -> test only, no publish.
 //
-// Nexus credentials are bound from the Jenkins credential 'pennsieve-nexus-ci-login'
-// around every sbt invocation (resolve + publish), matching pennsieve-api.
-// Without them sbt hits Nexus unauthenticated and fails with
-// "Server redirected too many times".
-
-def pennsieveNexusCreds = usernamePassword(
-    credentialsId: 'pennsieve-nexus-ci-login',
-    usernameVariable: 'PENNSIEVE_NEXUS_USER',
-    passwordVariable: 'PENNSIEVE_NEXUS_PW'
-)
+// Both go to AWS CodeArtifact. No Jenkins credential is involved: sbt gets a
+// short-lived token with the agent's instance role (see client-scala/build.sbt).
 
 // scalaClientVersion computes the version to publish:
 //   - on a vX.Y.Z tag  -> "X.Y.Z"            (release)
@@ -69,12 +61,9 @@ ansiColor('xterm') {
     }
 
     // Test the Scala client against the shared wire-contract fixtures.
-    // Needs Nexus creds: sbt resolves dependencies (and plugins) from Nexus.
     stage("Test Scala client") {
-      withCredentials([pennsieveNexusCreds]) {
-        dir("client-scala") {
-          sh "sbt -batch test"
-        }
+      dir("client-scala") {
+        sh "sbt -batch test"
       }
     }
 
@@ -82,10 +71,8 @@ ansiColor('xterm') {
     // build publishes the next-minor -SNAPSHOT. Other branches don't publish.
     if (isTag || isMain) {
       stage("Publish Scala client") {
-        withCredentials([pennsieveNexusCreds]) {
-          dir("client-scala") {
-            sh "sbt -batch -Dversion=${scalaVersion} publish"
-          }
+        dir("client-scala") {
+          sh "sbt -batch -Dversion=${scalaVersion} publish"
         }
       }
     }

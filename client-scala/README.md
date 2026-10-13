@@ -56,18 +56,20 @@ client.send(request) match {
 com.pennsieve %% email-client-scala % <version>   // Scala 2.13
 ```
 
-Published to the Pennsieve Nexus (`nexus.pennsieve.cc`), same as pennsieve-api,
-so a consumer that already resolves Pennsieve artifacts needs no extra resolver.
+Published to Pennsieve's AWS CodeArtifact `maven` repository (pennsieve-cc). A
+consumer needs that resolver and a CodeArtifact token; see `build.sbt` here for
+the few lines that set both up from the active AWS credentials. (1.0.0 was
+published to the old Nexus, before the move.)
 
 ## Versioning & publishing
 
 Releases are **intentional and tag-driven**. CI (the email-service `Jenkinsfile`)
-publishes to Nexus as follows:
+publishes to CodeArtifact as follows:
 
 | Trigger | Publishes | Where |
 |---|---|---|
-| **git tag `vX.Y.Z`** (or a GitHub Release from it) | release `X.Y.Z` | `maven-releases` |
-| **merge to `main`** | next-minor `-SNAPSHOT` (latest `v1.2.0` → `1.3.0-SNAPSHOT`) | `maven-snapshots` |
+| **git tag `vX.Y.Z`** (or a GitHub Release from it) | release `X.Y.Z` | `maven` |
+| **merge to `main`** | next-minor `-SNAPSHOT` (latest `v1.2.0` → `1.3.0-SNAPSHOT`) | `maven` |
 | other branches | nothing (test only) | — |
 
 Consumers pin a released semver (e.g. `com.pennsieve %% email-client-scala % "1.2.0"`),
@@ -80,12 +82,13 @@ convention (e.g. pennsieve-go-core); the artifact version drops the `v`.
 ```bash
 # local builds (version comes from -Dversion; bare publish is a dev SNAPSHOT)
 sbt test                       # compile + run the contract tests
-sbt -Dversion=1.2.3 publish    # publish 1.2.3 (needs Nexus creds in env)
+sbt -Dversion=1.2.3 publish    # publish 1.2.3 (CI only; see below)
 ```
 
-Publishing requires `PENNSIEVE_NEXUS_USER` / `PENNSIEVE_NEXUS_PW` in the
-environment (the Jenkins executor provides them via the `pennsieve-nexus-ci-login`
-credential).
+Access to CodeArtifact is IAM-based: sbt exchanges the active AWS credentials for
+a short-lived token. Locally, `assume-role non-prod admin` lets you build and test;
+publishing is only allowed for Jenkins (the build agents' instance role). A
+release version can't be republished: CodeArtifact rejects an existing version.
 
 ## Keeping in sync with the Go client
 
