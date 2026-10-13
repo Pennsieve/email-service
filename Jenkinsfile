@@ -6,33 +6,19 @@
 //
 // Scala client versioning (com.pennsieve:email-client-scala) — releases are
 // intentional, driven by git tags:
-//   * Tag build (vX.Y.Z)        -> publish release X.Y.Z.
-//   * main-branch build         -> publish next-minor-SNAPSHOT
-//                                   (e.g. latest tag v1.2.0 -> 1.3.0-SNAPSHOT).
-//   * other branches            -> test only, no publish.
+//   * Tag build (vX.Y.Z)        -> publish release X.Y.Z to AWS CodeArtifact.
+//   * main and other branches   -> test only, no publish.
 //
-// Both go to AWS CodeArtifact. No Jenkins credential is involved: sbt gets a
-// short-lived token with the agent's instance role (see client-scala/build.sbt).
+// No snapshots: consumers pin releases, and nothing has ever resolved one.
+// No Jenkins credential is involved: sbt gets a short-lived CodeArtifact token
+// with the agent's instance role (see client-scala/build.sbt).
 
-// scalaClientVersion computes the version to publish:
-//   - on a vX.Y.Z tag  -> "X.Y.Z"            (release)
-//   - otherwise        -> "X.(Y+1).0-SNAPSHOT" from the latest vX.Y.Z tag,
-//                         or "0.1.0-SNAPSHOT" if there are no tags yet.
-def scalaClientVersion(tagName) {
+// scalaReleaseVersion returns "X.Y.Z" for a vX.Y.Z tag build, null otherwise.
+def scalaReleaseVersion(tagName) {
   if (tagName?.trim() && tagName ==~ /^v\d+\.\d+\.\d+$/) {
     return tagName.substring(1) // strip leading 'v'
   }
-  def latest = sh(
-    returnStdout: true,
-    script: "git tag --list 'v*' --sort=-v:refname | head -1"
-  ).trim()
-  if (!latest) {
-    return "0.1.0-SNAPSHOT"
-  }
-  def m = (latest =~ /^v(\d+)\.(\d+)\.(\d+)$/)
-  def major = m[0][1] as int
-  def minor = m[0][2] as int
-  return "${major}.${minor + 1}.0-SNAPSHOT"
+  return null
 }
 
 ansiColor('xterm') {
@@ -42,14 +28,13 @@ ansiColor('xterm') {
 
   def authorName  = sh(returnStdout: true, script: 'git --no-pager show --format="%an" --no-patch')
   def isMain    = env.BRANCH_NAME == "main"
-  def isTag     = (env.TAG_NAME?.trim()) ? true : false
   def serviceName = env.JOB_NAME.tokenize("/")[1]
   def isRealService = serviceName != "template-serverless-service"
 
   def commitHash  = sh(returnStdout: true, script: 'git rev-parse HEAD | cut -c-7').trim()
   def imageTag    = "${env.BUILD_NUMBER}-${commitHash}"
 
-  def scalaVersion = scalaClientVersion(env.TAG_NAME)
+  def scalaVersion = scalaReleaseVersion(env.TAG_NAME)
 
   try {
     stage("Run Tests") {
@@ -67,9 +52,8 @@ ansiColor('xterm') {
       }
     }
 
-    // Publish the Scala client. A vX.Y.Z tag publishes the release X.Y.Z; a main
-    // build publishes the next-minor -SNAPSHOT. Other branches don't publish.
-    if (isTag || isMain) {
+    // Publish the Scala client: only a vX.Y.Z tag publishes, as release X.Y.Z.
+    if (scalaVersion) {
       stage("Publish Scala client") {
         dir("client-scala") {
           sh "sbt -batch -Dversion=${scalaVersion} publish"

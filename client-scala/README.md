@@ -69,11 +69,10 @@ publishes to CodeArtifact as follows:
 | Trigger | Publishes | Where |
 |---|---|---|
 | **git tag `vX.Y.Z`** (or a GitHub Release from it) | release `X.Y.Z` | `maven` |
-| **merge to `main`** | next-minor `-SNAPSHOT` (latest `v1.2.0` → `1.3.0-SNAPSHOT`) | `maven` |
-| other branches | nothing (test only) | — |
+| merge to `main`, other branches | nothing (test only) | — |
 
-Consumers pin a released semver (e.g. `com.pennsieve %% email-client-scala % "1.2.0"`),
-never a SNAPSHOT.
+Consumers pin a released semver (e.g. `com.pennsieve %% email-client-scala % "1.2.0"`).
+No snapshots are published.
 
 **To cut a release:** tag the commit `vX.Y.Z` and push the tag (or publish a
 GitHub Release); CI publishes `X.Y.Z`. Use `v`-prefixed tags to match the house

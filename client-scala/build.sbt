@@ -7,13 +7,12 @@
 ThisBuild / organization := "com.pennsieve"
 ThisBuild / scalaVersion := "2.13.16"
 
-// CI always injects the version (sbt -Dversion=X.Y.Z publish): a vX.Y.Z tag
-// publishes the release X.Y.Z; a main build publishes the next-minor -SNAPSHOT
-// (see the Jenkinsfile). The fallback only applies to a bare local `sbt publish`.
+// CI injects the version (sbt -Dversion=X.Y.Z publish) on a vX.Y.Z tag build,
+// the only builds that publish (see the Jenkinsfile). The fallback only applies
+// to local builds.
 ThisBuild / version := sys.props.get("version").getOrElse("0.0.0-SNAPSHOT")
 
-// Pennsieve packages live in AWS CodeArtifact (pennsieve-cc), releases and
-// snapshots in one repository. Access is IAM: the build exchanges the active
+// Pennsieve packages live in AWS CodeArtifact (pennsieve-cc), `maven` repository. Access is IAM: the build exchanges the active
 // AWS credentials -- the Jenkins agent's instance role, or `assume-role
 // non-prod admin` locally -- for a short-lived token. Nothing is stored.
 // CODEARTIFACT_AUTH_TOKEN, if set, is used instead (e.g. inside Docker builds).
@@ -34,6 +33,11 @@ ThisBuild / credentials += Credentials("pennsieve/maven", codeArtifactHost, "aws
 ThisBuild / resolvers += "pennsieve" at codeArtifactRepo
 ThisBuild / publishTo := Some("pennsieve" at codeArtifactRepo)
 ThisBuild / publishMavenStyle := true
+
+// Publish the way Maven does (sbt-aether-deploy). sbt's own publisher writes
+// neither maven-metadata.xml nor timestamped snapshots, so in CodeArtifact its
+// releases stay Unfinished and its snapshots are rejected.
+overridePublishSettings
 
 lazy val circeVersion = "0.14.1"
 lazy val awsV2Version  = "2.20.26"
