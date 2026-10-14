@@ -23,5 +23,6 @@
   "invite-external-new-user-to-dataset": ["customMessage","datasetName","invitingEmailAddress","invitingPerson","setupAccountLink","workspaceName"],
   "notification-of-publication-to-contributor": ["datasetName","discoverDatasetId","discoverHost","ownerName"],
   "rehydration-complete": ["AWSRegion","DatasetID","DatasetVersionID","RehydrationLocation"],
-  "rehydration-failed": ["DatasetID","DatasetVersionID","RequestID","SupportEmailAddress"]
+  "rehydration-failed": ["DatasetID","DatasetVersionID","RequestID","SupportEmailAddress"],
+  "user-notification": ["Detail","TopicDescription"]
 }
