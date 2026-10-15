@@ -519,4 +519,19 @@ object Messages {
         "SupportEmailAddress" -> SupportEmailAddress
       )
     )
+
+  /** Builds the "user-notification" email. */
+  def userNotification(
+      to: Recipient,
+      Detail: String,
+      TopicDescription: String
+  ): EmailRequest =
+    build(
+      "user-notification",
+      to,
+      str(
+        "Detail" -> Detail,
+        "TopicDescription" -> TopicDescription
+      )
+    )
 }

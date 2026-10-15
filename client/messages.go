@@ -498,3 +498,17 @@ func RehydrationFailed(to To, args RehydrationFailedArgs) EmailRequest {
 		"SupportEmailAddress": args.SupportEmailAddress,
 	})
 }
+
+// UserNotificationArgs are the variables for the "user-notification" template.
+type UserNotificationArgs struct {
+	Detail           string
+	TopicDescription string
+}
+
+// UserNotification builds the "user-notification" email.
+func UserNotification(to To, args UserNotificationArgs) EmailRequest {
+	return Message("user-notification", to, map[string]any{
+		"Detail":           args.Detail,
+		"TopicDescription": args.TopicDescription,
+	})
+}
