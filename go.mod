@@ -1,6 +1,6 @@
 module github.com/pennsieve/email-service
 
-go 1.23.0
+go 1.27.2
 
 require (
 	github.com/aws/aws-lambda-go v1.34.1
