@@ -176,9 +176,9 @@ The service is two lambdas:
 - **queue lambda** (`cmd/queue`) — consumes the SQS send queue
   `{env}-email-service-queue-use1` via an event source mapping with
   `ReportBatchItemFailures`; renders and delivers each message.
-- **bounce lambda** (`cmd/bounce`) — subscribed to the
-  `{env}-email-service-bounce-topic-use1` SNS topic that SES publishes
-  bounce/complaint notifications to; auto-suppresses the affected addresses (see
+- **bounce lambda** (`cmd/bounce`) — subscribed to the existing, centrally-managed
+  SES **Bounce** and **Complaint** SNS topics for the Pennsieve domain identity;
+  auto-suppresses the affected addresses (see
   [Bounce & complaint auto-suppression](#bounce--complaint-auto-suppression)).
 
 ### Environment variables
@@ -234,10 +234,10 @@ Caps are env vars (`SEND_RATE_LIMIT_PER_MINUTE`, `PER_MESSAGE_RATE_LIMIT_PER_MIN
 ### Bounce & complaint auto-suppression
 
 The address suppression list above is also fed automatically. SES publishes
-**bounce** and **complaint** notifications for the Pennsieve domain identity to an
-SNS topic, and a second lambda (`cmd/bounce`, subscribed to that topic) adds the
-affected addresses to the `email-suppression` table so the service stops sending
-to them:
+**bounce** and **complaint** notifications for the Pennsieve domain identity to
+centrally-managed SNS topics, and a second lambda (`cmd/bounce`, subscribed to
+those topics) adds the affected addresses to the `email-suppression` table so the
+service stops sending to them:
 
 - **Permanent bounces** → suppressed with `Reason=bounce`. These are hard failures
   (address doesn't exist); repeatedly sending to them is what wrecks the account's
@@ -250,6 +250,13 @@ to them:
 The handler is idempotent (re-suppressing refreshes the row) and skips unparseable
 notifications rather than failing the SNS delivery. This closes the loop: bad
 addresses are removed from circulation without operator intervention.
+
+> **Wiring.** SES identity administration (the identity → topic routing) is
+> house-managed; this service does not create the topics or touch the identity.
+> The bounce lambda subscribes to the existing platform Bounce/Complaint topics,
+> whose ARNs are passed in via the `bounce_topic_arn` / `complaint_topic_arn`
+> Terraform variables. Until those are supplied the lambda deploys but receives
+> nothing — no subscription is created — so auto-suppression is inert.
 
 ### Table: `email-message-templates`
 Maps `messageId` to a template file in S3 and the default *subject* line. The

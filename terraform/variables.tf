@@ -47,6 +47,20 @@ variable "per_message_rate_limit_per_minute" {
   default = 120
 }
 
+# ARNs of the EXISTING, centrally-managed SES notification SNS topics for the
+# Pennsieve domain identity. The bounce lambda subscribes to these (see sns.tf).
+# SES identity administration is house-controlled, so this service consumes the
+# platform topics rather than creating them or repointing the identity. Left
+# empty, no subscription is created and the lambda receives nothing (deploy stays
+# green while the ARNs are confirmed with the platform owner).
+variable "bounce_topic_arn" {
+  default = ""
+}
+
+variable "complaint_topic_arn" {
+  default = ""
+}
+
 locals {
   domain_name = data.terraform_remote_state.account.outputs.domain_name
   hosted_zone = data.terraform_remote_state.account.outputs.public_hosted_zone_id
